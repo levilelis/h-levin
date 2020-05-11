@@ -93,12 +93,12 @@ def bootstrap_learning(states, loss_name, output):
             error = planner.learn()
             print(error)
         
-        if id_batch % 1 == 0:
-            planner.save_model(join(models_folder, 'model_weights')) 
+
+        planner.save_model(join(models_folder, 'model_weights')) 
         
         id_batch += 1
     
-    planner.save_model(join(models_folder, 'model_weights')) 
+#     planner.save_model(join(models_folder, 'model_weights')) 
     
     dfs_levin(states, planner)
     
