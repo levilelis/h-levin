@@ -22,7 +22,7 @@ def bootstrap_learning(states, loss_name, output):
     
 #     dfs_levin(states, planner)
     
-    models_folder = '../trained_models/' + output
+    models_folder = 'trained_models/' + output
     if not os.path.exists(models_folder):
         os.makedirs(models_folder)
     
@@ -62,7 +62,7 @@ def bootstrap_learning(states, loss_name, output):
                 current_unsolved_puzzles[file] = state
         
         end = time.time()
-        with open(join('../logs/training_bootstrap_' + output), 'a') as results_file:
+        with open(join('logs/training_bootstrap_' + output), 'a') as results_file:
             results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(id_batch, 
                                                                              number_solved, 
                                                                              number_unsolved, 

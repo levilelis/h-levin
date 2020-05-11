@@ -65,24 +65,6 @@ class DFSLevin():
         self.has_trained = True
         
         return self.nn.train_with_memory(self._memory)
-        
-#         random_indices = np.random.permutation(len(self._y))
-#         local_x = np.array(self._x)
-#         local_y = np.array(self._y)
-#         errors = []
-#         for i in range(len(self._y)):
-#             index_beg = i * self.batch_size
-#             index_end = (i+1) * self.batch_size + 1
-#             if index_end > len(random_indices):
-#                 index_end = len(random_indices)
-#             if index_beg < len(random_indices):
-#                 x = local_x[random_indices[index_beg:index_end]]
-#                 y = local_y[random_indices[index_beg:index_end]]
-#                 error = self.nn.train(x, y)
-# #                 error = self.conv_nn.batch_train_positive_examples(x, y)
-#                 errors.append(error)
-#             else:
-#                 return np.mean(errors)
     
     def increase_budget(self):
         """
