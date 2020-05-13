@@ -21,7 +21,7 @@ class DFSLevin():
             self.nn = ConvNet((2, 2), 32, 4, loss_name)
         else:
             self.nn = ConvNet((2, 2), 32, 4, loss_name)
-            self.nn.load_weights(model_name)
+            self.nn.load_weights(model_name).expect_partial()
         
         self.train_positive_labels = []
         self.train_positive_images = []
@@ -141,7 +141,7 @@ class DFSLevin():
             self.train_positive_images.append(copy.deepcopy(self.solution_states[i]))
             self.train_positive_labels.append(self.solution_actions[i])
 
-        trajectory = Trajectory(self.solution_states, self.solution_actions, self.solution_f_values)
+        trajectory = Trajectory(self.solution_states, self.solution_actions, self.solution_f_values, self._states_expanded)
         self._memory.add_trajectory(trajectory)
 
         self.solution_states = []
@@ -155,7 +155,7 @@ class DFSLevin():
         Recursive implementation of Depth-First LTS using a policy given by the 
         neural network self.conv_nn. 
         """
-        v = math.log(depth + state.manhattan_distance()) - p
+        v = math.log(depth + state.heuristic_value()) - p
         if v > level:
             if self.new_bound == -1 or v < self.new_bound:
                 self.new_bound = v
@@ -166,9 +166,6 @@ class DFSLevin():
         
         action_distribution_log, _, _ = self.nn(self._get_images(np.array([state])))
         action_distribution_log = action_distribution_log[0]
-        
-#         print('Action distribution: ', action_distribution_log)
-#         state.plot()
          
         for a in actions:
             child = copy.deepcopy(state)
@@ -179,16 +176,16 @@ class DFSLevin():
                 if learning:
                     self.solution_states.append(copy.deepcopy(state))
                     self.solution_actions.append(a)
-                    self.solution_f_values.append(depth + child.manhattan_distance())
+                    self.solution_f_values.append(depth + child.heuristic_value())
                 
-                self.solution_depth = depth + 1
+                self.solution_depth = depth
                 return True
                  
             if self._dfs_lvn_budget_for_learning(child, p + action_distribution_log[a], depth+1, level, learning):
                 if learning:
                     self.solution_states.append(copy.deepcopy(state))
                     self.solution_actions.append(a)
-                    self.solution_f_values.append(depth + child.manhattan_distance())
+                    self.solution_f_values.append(depth + child.heuristic_value())
                 return True
         return False
     

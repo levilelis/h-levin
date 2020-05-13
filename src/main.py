@@ -5,104 +5,12 @@ from os import listdir
 from os.path import isfile, join
 from search.dfs_levin import DFSLevin
 from domains.witness import WitnessState
+from search.bfs_levin import BFSLevin
+from models.memory import Memory
+from models.conv_net import ConvNet
     
-def bootstrap_learning(states, loss_name, output):
-    """
-    This function runs (iterative-deepening) Levin tree search within the Bootstrap framework. The process starts
-    with policy encoded in a neural network with randomly initialized weights and the minimum search budget,
-    which is given by an interger b (stored in the dictionary state_budget for different problems in the code)
-    and computed as e^b. In every iteration LTS tries to solve every problem in the problem set with a fixed
-    search budget. If no problems are solved, then we increase the budget b by 1. If at least one problem 
-    is solved in a given iteration, then we train the neural network with the solved problems and set b = 1.
-    
-    We repeat this process until all problems in the set of problems (denoted by list states in the code).    
-    """
-
-    planner = DFSLevin(loss_name) 
-    
-#     dfs_levin(states, planner)
-    
-    log_folder = 'logs/'
-    models_folder = 'trained_models/' + output
-    if not os.path.exists(models_folder):
-        os.makedirs(models_folder)
-        
-    if not os.path.exists(log_folder):
-        os.makedirs(log_folder)
-    
-    state_budget = {}
-    for file, state in states.items():
-        state_budget[state] = 1
-    
-    unsolved_puzzles = states
-    id_solved = 1
-    id_batch = 1
-    total_expanded = 0
-    total_generated = 0
-    
-    start = time.time()
-    
-    while len(unsolved_puzzles) > 0:
-        number_solved = 0
-        number_unsolved = 0
-        current_unsolved_puzzles = {}
-        
-        for file, state in unsolved_puzzles.items():
-            state.clear_path()
-            has_found_solution, new_bound, expanded, generated = planner.search_for_learning(state, state_budget[state])
-            
-            total_expanded += expanded
-            total_generated += generated
-            
-            if has_found_solution:
-                number_solved += 1
-                id_solved += 1
-            else:
-                if new_bound != -1:
-                    state_budget[state] = new_bound
-                else:
-                    state_budget[state] = state_budget[state] + 1 
-                number_unsolved += 1
-                current_unsolved_puzzles[file] = state
-        
-        end = time.time()
-        with open(join(log_folder + 'training_bootstrap_' + output), 'a') as results_file:
-            results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(id_batch, 
-                                                                             number_solved, 
-                                                                             number_unsolved, 
-                                                                             planner.size_training_set(), 
-                                                                             planner.current_budget(),
-                                                                             total_expanded,
-                                                                             total_generated, 
-                                                                             end-start)))
-            results_file.write('\n')
-        
-        if number_solved != 0:
-            planner.reset_budget()
-            for file, state in states.items():
-                state_budget[state] = 1
-        else:
-            planner.increase_budget()
-            continue
-                
-        unsolved_puzzles = current_unsolved_puzzles
-        
-        planner.preprocess_data()
-        
-        for _ in range(5):
-            error = planner.learn()
-            print(error)
-        
-
-        planner.save_model(join(models_folder, 'model_weights')) 
-        
-        id_batch += 1
-    
-#     planner.save_model(join(models_folder, 'model_weights')) 
-    
-    dfs_levin(states, planner)
-    
-def dfs_levin(states, planner):
+   
+def levin_search(states, planner, nn_model):
     """
     This function runs (iterative-deepening) Levin tree search with a learned policy on a set of problems    
     """   
@@ -116,7 +24,7 @@ def dfs_levin(states, planner):
         start = time.time()
         
         state.clear_path()
-        solution_depth, expanded, generated = planner.search(state)
+        solution_depth, expanded, generated = planner.search(state, nn_model)
         total_expanded += expanded
         total_generated += generated
         total_cost += solution_depth
@@ -130,7 +38,85 @@ def dfs_levin(states, planner):
                                                                                  total_expanded, 
                                                                                 total_generated, 
                                                                                 end_total - start_total))    
+
+
+                
+def bootstrap_learning_bfs(states, loss_name, output, initial_budget):
+
+    nn_model = ConvNet((2, 2), 32, 4, loss_name)
+    planner = BFSLevin()
     
+#     levin_search(states, planner, nn_model)
+        
+    log_folder = 'logs/'
+    models_folder = 'trained_models/' + output
+    if not os.path.exists(models_folder):
+        os.makedirs(models_folder)
+        
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
+    
+    number_problems = len(states)
+    
+    iteration = 1
+    number_solved = 0
+    total_expanded = 0
+    total_generated = 0
+    
+    budget = initial_budget
+    memory = Memory()
+    start = time.time()
+    
+    current_solved_puzzles = set()
+    
+    while len(current_solved_puzzles) < number_problems:
+        number_solved = 0
+        
+        for file, state in states.items():
+            state.clear_path()
+            has_found_solution, trajectory, expanded, generated = planner.search_for_learning(state, budget, nn_model)
+            
+            total_expanded += expanded
+            total_generated += generated
+            
+            if has_found_solution:
+                memory.add_trajectory(trajectory)
+            
+            if has_found_solution and file not in current_solved_puzzles:
+                number_solved += 1
+                current_solved_puzzles.add(file)
+        
+        end = time.time()
+        with open(join(log_folder + 'training_bootstrap_' + output), 'a') as results_file:
+            results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(iteration, 
+                                                                             number_solved, 
+                                                                             number_problems - len(current_solved_puzzles), 
+                                                                             budget,
+                                                                             total_expanded,
+                                                                             total_generated, 
+                                                                             end-start)))
+            results_file.write('\n')
+        
+        print('Number solved: ', number_solved)
+        if number_solved > 0:
+            loss = 1
+            while loss > 1e-1:
+                loss = nn_model.train_with_memory(memory)
+                print(loss)
+            budget = initial_budget
+            memory.clear()
+        else:
+            budget *= 2
+            print('Budget: ', budget)
+            continue
+                                
+        iteration += 1
+    
+    nn_model.save_weights(join(models_folder, 'model_weights')) 
+    
+    levin_search(states, planner, nn_model)
+
+
 def main():
     """
     It is possible to use this system to either train a new neural network model through the bootstrap system and
@@ -177,7 +163,7 @@ def main():
     loss_name = sys.argv[2]
     output_file = sys.argv[3]
     model_file = None
-    
+        
     if len(sys.argv) == 5:
         model_file = sys.argv[4]
     
@@ -192,10 +178,12 @@ def main():
         states[file] = s
     
     if model_file == None:
-        bootstrap_learning(states, loss_name, output_file)
+        bootstrap_learning_bfs(states, loss_name, output_file, 50)
     else:
-        planner = DFSLevin(loss_name, model_file)
-        dfs_levin(states, planner)
+        nn_model = ConvNet((2, 2), 32, 4, loss_name)
+        nn_model.load_weights(model_file).expect_partial()
+        bfs_planner = BFSLevin()
+        levin_search(states, bfs_planner, nn_model)
             
 if __name__ == "__main__":
     main()

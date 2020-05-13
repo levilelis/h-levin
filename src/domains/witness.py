@@ -298,7 +298,8 @@ class WitnessState(Environment):
                     np.array_equal(self._v_seg, other._v_seg) and np.array_equal(self._h_seg, other._h_seg) and 
                     np.array_equal(self._cells, other._cells) and self._column_init == other._column_init and
                     self._line_init == other._line_init and self._column_goal == other._column_goal and
-                    self._line_goal == other._line_goal
+                    self._line_goal == other._line_goal and self._line_tip == other._line_tip and 
+                    self._column_tip == other._column_tip
                 )
         #return np.array_equal(self._v_seg, other._v_seg) and np.array_equal(self._h_seg, other._h_seg) and self.__cell_color_invariant_eq__(other) 
         
@@ -728,6 +729,27 @@ class WitnessState(Environment):
         
     def get_solution_depth(self):
         return self._solution_depth
+    
+    def copy(self):
+        copy_state = WitnessState(self._lines, 
+                                  self._columns,
+                                  self._line_init,
+                                  self._column_init,
+                                  self._line_goal,
+                                  self._column_goal,
+                                  self._max_lines,
+                                  self._max_columns)
+        
+        copy_state._line_tip = self._line_tip
+        copy_state._column_tip = self._column_tip
+        copy_state._dots[self._line_tip][self._column_tip] = 1
+        
+        copy_state._v_seg = self._v_seg.copy()
+        copy_state._h_seg = self._h_seg.copy()
+        copy_state._cells = self._cells.copy()
+        
+        return copy_state    
+        
         
     def read_state(self, filename):
         """
@@ -760,5 +782,5 @@ class WitnessState(Environment):
                     numbers = t.split(' ')
                     self._cells[int(numbers[0])][int(numbers[1])] = int(numbers[2])
                     
-    def manhattan_distance(self):
+    def heuristic_value(self):
         return abs(self._column_tip - self._column_goal) + abs(self._line_tip - self._line_goal)
