@@ -178,7 +178,7 @@ def main():
         states[file] = s
     
     if model_file == None:
-        bootstrap_learning_bfs(states, loss_name, output_file, 50)
+        bootstrap_learning_bfs(states, loss_name, output_file, 500)
     else:
         nn_model = ConvNet((2, 2), 32, 4, loss_name)
         nn_model.load_weights(model_file).expect_partial()
