@@ -11,7 +11,7 @@ class LossFunction(ABC):
 class LevinLoss(LossFunction):
     
     def __init__(self):
-        self.cross_entropy_loss = keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.cross_entropy_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
     
     def compute_loss(self, trajectory, model):
         images = [s.get_image_representation() for s in trajectory.get_states()]           
@@ -26,7 +26,7 @@ class LevinLoss(LossFunction):
 class CrossEntropyLoss(LossFunction):
     
     def __init__(self):
-        self.cross_entropy_loss = keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.cross_entropy_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
     
     def compute_loss(self, trajectory, model):
         images = [s.get_image_representation() for s in trajectory.get_states()]
