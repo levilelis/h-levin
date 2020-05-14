@@ -1,15 +1,18 @@
 import os
 import sys
 import time
+import numpy as np
 from os import listdir
 from os.path import isfile, join
 from domains.witness import WitnessState
 from search.bfs_levin import BFSLevin
 from models.memory import Memory
 from models.conv_net import ConvNet, TwoHeadedConvNet
+from models.model_wrapper import KerasManager, KerasModel
+from concurrent.futures.process import ProcessPoolExecutor
     
    
-def levin_search(states, planner, nn_model):
+def levin_search(states, planner, nn_model, ncpus):
     """
     This function runs (iterative-deepening) Levin tree search with a learned policy on a set of problems    
     """   
@@ -17,21 +20,35 @@ def levin_search(states, planner, nn_model):
     total_generated = 0
     total_cost = 0
     
+    for _, state in states.items():
+        state.clear_path()
+    
     start_total = time.time()
     
-    for _, state in states.items():
-        start = time.time()
+    with ProcessPoolExecutor(max_workers = ncpus) as executor:
+        args = ((state, nn_model) for name, state in states.items()) 
+        results = executor.map(planner.search, args)
+    for result in results:
+        solution_depth = result[0]
+        expanded = result[1]
+        generated = result[2]
         
-        state.clear_path()
-        solution_depth, expanded, generated = planner.search(state, nn_model)
         total_expanded += expanded
         total_generated += generated
         total_cost += solution_depth
         
-        end = time.time()
-        
-        print("{:d}, {:d}, {:d}, {:.2f}".format(solution_depth, expanded, generated, end - start))
+        print("{:d}, {:d}, {:d}".format(solution_depth, expanded, generated))
     
+#     for _, state in states.items():
+#         start = time.time()
+#         
+#         solution_depth, expanded, generated = planner.search(state, nn_model)
+#         total_expanded += expanded
+#         total_generated += generated
+#         total_cost += solution_depth
+#         
+#         end = time.time()
+        
     end_total = time.time()
     print("Cost: {:d} \t Expanded: {:d} \t Generated: {:d}, Time: {:.2f}".format(total_cost,
                                                                                  total_expanded, 
@@ -39,9 +56,10 @@ def levin_search(states, planner, nn_model):
                                                                                 end_total - start_total))    
 
 
-                
-def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget):
-        
+def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
+    
+    levin_search(states, planner, nn_model, ncpus)
+    
     log_folder = 'logs/'
     models_folder = 'trained_models/' + output
     if not os.path.exists(models_folder):
@@ -66,19 +84,37 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget):
     while len(current_solved_puzzles) < number_problems:
         number_solved = 0
         
-        for file, state in states.items():
-            state.clear_path()
-            has_found_solution, trajectory, expanded, generated = planner.search_for_learning(state, budget, nn_model)
-            
-            total_expanded += expanded
-            total_generated += generated
+        with ProcessPoolExecutor(max_workers = ncpus) as executor:
+            args = ((state, name, budget, nn_model) for name, state in states.items()) 
+            results = executor.map(planner.search_for_learning, args)
+        for result in results:
+            has_found_solution = result[0]
+            trajectory = result[1]
+            total_expanded += result[2]
+            total_generated += result[3]
+            puzzle_name = result[4]
             
             if has_found_solution:
                 memory.add_trajectory(trajectory)
-            
-            if has_found_solution and file not in current_solved_puzzles:
+             
+            if has_found_solution and puzzle_name not in current_solved_puzzles:
                 number_solved += 1
-                current_solved_puzzles.add(file)
+                current_solved_puzzles.add(puzzle_name)
+            
+#         for file, state in states.items():
+#             state.clear_path()
+#                         
+#             has_found_solution, trajectory, expanded, generated = planner.search_for_learning(state, budget, nn_model)
+#              
+#             total_expanded += expanded
+#             total_generated += generated
+#              
+#             if has_found_solution:
+#                 memory.add_trajectory(trajectory)
+#              
+#             if has_found_solution and file not in current_solved_puzzles:
+#                 number_solved += 1
+#                 current_solved_puzzles.add(file)
         
         end = time.time()
         with open(join(log_folder + 'training_bootstrap_' + output), 'a') as results_file:
@@ -93,7 +129,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget):
         
         print('Number solved: ', number_solved)
         if number_solved > 0:
-            for _ in range(100):
+            for _ in range(50):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
             budget = initial_budget
@@ -107,7 +143,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget):
     
     nn_model.save_weights(join(models_folder, 'model_weights')) 
     
-    levin_search(states, planner, nn_model)
+    levin_search(states, planner, nn_model, ncpus)
 
 
 def main():
@@ -173,21 +209,32 @@ def main():
         s.read_state(join(puzzle_folder, file))
         states[file] = s
         
-    if use_heuristic == 'y' and use_learned_heuristic == 'f':
-        bfs_planner = BFSLevin(use_heuristic=True, use_learned_heuristic=False)
-        nn_model = ConvNet((2, 2), 32, 4, loss_name)
-    elif use_heuristic == 'y' and use_learned_heuristic == 'y':
-        bfs_planner = BFSLevin(use_heuristic=True, use_learned_heuristic=True)
-        nn_model = TwoHeadedConvNet((2, 2), 32, 4, loss_name)
-    else:
-        bfs_planner = BFSLevin(use_heuristic=False, use_learned_heuristic=False)
-        nn_model = ConvNet((2, 2), 32, 4, loss_name)
+    KerasManager.register('KerasModel', KerasModel)
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 2))
     
-    if model_file == None:
-        bootstrap_learning_bfs(states, bfs_planner, nn_model, output_file, 500)
-    else:
-        nn_model.load_weights(model_file).expect_partial()
-        levin_search(states, bfs_planner, nn_model)
+    print('Number of cpus available: ', ncpus)
+    
+    with KerasManager() as manager:
+                
+        nn_model = manager.KerasModel()
+    
+        if use_heuristic == 'y' and use_learned_heuristic == 'f':
+            bfs_planner = BFSLevin(use_heuristic=True, use_learned_heuristic=False)
+            nn_model.initialize(loss_name, two_headed_model=False)
+    
+        elif use_heuristic == 'y' and use_learned_heuristic == 'y':
+            bfs_planner = BFSLevin(use_heuristic=True, use_learned_heuristic=True)
+            nn_model.initialize(loss_name, two_headed_model=True)
+            
+        else:
+            bfs_planner = BFSLevin(use_heuristic=False, use_learned_heuristic=False)
+            nn_model.initialize(loss_name, two_headed_model=False)
+        
+        if model_file == None:
+            bootstrap_learning_bfs(states, bfs_planner, nn_model, output_file, 500, ncpus)
+        else:
+            nn_model.load_weights(model_file).expect_partial()
+            levin_search(states, bfs_planner, nn_model, ncpus)
             
 if __name__ == "__main__":
     main()

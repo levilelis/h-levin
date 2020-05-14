@@ -77,12 +77,15 @@ class BFSLevin():
             return (child.heuristic_value() + parent.get_g() + 1) - (parent.get_p() + p_action)
         return (parent.get_g() + 1) - (parent.get_p() + p_action)
     
-    def search(self, state, nn_model):
+    def search(self, data):
         """
         Performs Best-First LTS . 
         
         Returns solution cost. 
         """
+        state = data[0] 
+        nn_model = data[1]
+        
         _open = []
         _closed = set()
         
@@ -156,7 +159,8 @@ class BFSLevin():
         
         return Trajectory(states, actions, solution_costs, expanded)        
      
-    def search_for_learning(self, state, budget, nn_model):
+#     def search_for_learning(self, state, budget, nn_model):
+    def search_for_learning(self, data):
         """
         Performs Best-First LTS bounded by a search budget.
         
@@ -165,6 +169,11 @@ class BFSLevin():
         """
         expanded = 0
         generated = 0
+        
+        state = data[0]
+        puzzle_name = data[1]
+        budget = data[2]
+        nn_model = data[3]
         
         _open = []
         _closed = set()
@@ -178,7 +187,7 @@ class BFSLevin():
             expanded += 1
             
             if expanded == budget:
-                return False, None, expanded, generated
+                return False, None, expanded, generated, puzzle_name
             
             actions = node.get_game_state().successors()
         
@@ -187,7 +196,7 @@ class BFSLevin():
                 action_distribution_log, predicted_h = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
             else:
                 action_distribution_log = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
-            
+                            
             for a in actions:
                 child = copy.deepcopy(node.get_game_state())
                 child.apply_action(a)
@@ -204,7 +213,7 @@ class BFSLevin():
                 
                 if child.is_solution(): 
                     trajectory = self._store_trajectory_memory(child_node, expanded)
-                    return True, trajectory, expanded, generated
+                    return True, trajectory, expanded, generated, puzzle_name
                 
                 if child not in _closed:
                     heapq.heappush(_open, child_node)
