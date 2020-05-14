@@ -1,7 +1,6 @@
 import heapq
 import numpy as np
 
-from models.conv_net import ConvNet
 from models.memory import Trajectory
 import copy
 import math
@@ -67,6 +66,14 @@ class TreeNode:
 
 class BFSLevin():
     
+    def __init__(self, use_heuristic=True):
+        self._use_heuristic = use_heuristic
+    
+    def get_levin_cost(self, parent, child, p_action):
+        if self._use_heuristic:
+            return (child.heuristic_value() + parent.get_g() + 1) - (parent.get_p() + p_action)
+        return (parent.get_g() + 1) - (parent.get_p() + p_action)
+    
     def search(self, state, nn_model):
         """
         Performs Best-First LTS . 
@@ -101,7 +108,7 @@ class BFSLevin():
                     return node.get_g() + 1, self._expanded, self._generated
                 
                 if child not in _closed:
-                    levin_cost = math.log(child.heuristic_value() + node.get_g() + 1) - (node.get_p() + action_distribution_log[a])
+                    levin_cost = math.log(self.get_levin_cost(node, child, action_distribution_log[a]))
                     
                     child_node = TreeNode(node,
                                           child, 
@@ -171,8 +178,6 @@ class BFSLevin():
             actions = node.get_game_state().successors()
         
             action_distribution_log = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
-#             action_distribution_log = action_distribution_log[0]
-#             print(action_distribution_log)
             
             for a in actions:
                 child = copy.deepcopy(node.get_game_state())
@@ -180,7 +185,7 @@ class BFSLevin():
                 
                 generated += 1
                 
-                levin_cost = math.log(child.heuristic_value() + node.get_g() + 1) - (node.get_p() + action_distribution_log[a])                
+                levin_cost = math.log(self.get_levin_cost(node, child, action_distribution_log[a]))                
                 child_node = TreeNode(node,
                                       child, 
                                       node.get_p() + action_distribution_log[a], 

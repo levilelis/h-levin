@@ -41,12 +41,7 @@ def levin_search(states, planner, nn_model):
 
 
                 
-def bootstrap_learning_bfs(states, loss_name, output, initial_budget):
-
-    nn_model = ConvNet((2, 2), 32, 4, loss_name)
-    planner = BFSLevin()
-    
-#     levin_search(states, planner, nn_model)
+def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget):
         
     log_folder = 'logs/'
     models_folder = 'trained_models/' + output
@@ -155,17 +150,19 @@ def main():
             names described above while learning a model.          
     """
     if len(sys.argv) < 3:
-        print('Usage for learning a new model: main folder-with-puzzles output-file loss-name model-to-be-loaded')
+        print('Usage for learning a new model: main folder-with-puzzles output-file loss-name use-heuristic model-to-be-loaded')
         print('Loss can be either LevinLoss or CrossEntropyLoss')
+        print('Use heuristic is either y or n')
         print('Model to be loaded is optional. If name is not provided, then a new model will be trained.')
         return
     puzzle_folder = sys.argv[1]
     loss_name = sys.argv[2]
     output_file = sys.argv[3]
+    use_heuristic = sys.argv[4]
     model_file = None
         
-    if len(sys.argv) == 5:
-        model_file = sys.argv[4]
+    if len(sys.argv) == 6:
+        model_file = sys.argv[5]
     
     states = {}
     puzzle_files = [f for f in listdir(puzzle_folder) if isfile(join(puzzle_folder, f))]
@@ -176,13 +173,16 @@ def main():
         s = WitnessState()
         s.read_state(join(puzzle_folder, file))
         states[file] = s
+    if use_heuristic == 'y':
+        bfs_planner = BFSLevin(True)
+    else:
+        bfs_planner = BFSLevin(False)
+    nn_model = ConvNet((2, 2), 32, 4, loss_name)
     
     if model_file == None:
-        bootstrap_learning_bfs(states, loss_name, output_file, 500)
+        bootstrap_learning_bfs(states, bfs_planner, nn_model, output_file, 500)
     else:
-        nn_model = ConvNet((2, 2), 32, 4, loss_name)
         nn_model.load_weights(model_file).expect_partial()
-        bfs_planner = BFSLevin()
         levin_search(states, bfs_planner, nn_model)
             
 if __name__ == "__main__":
