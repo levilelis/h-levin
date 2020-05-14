@@ -22,6 +22,9 @@ class KerasModel():
     
     def save_weights(self, filepath):
         self.model.save_weights(filepath)
+        
+    def load_weights(self, filepath):
+        self.model.load_weights(filepath).expect_partial()
 
 class KerasManager(BaseManager):
     pass

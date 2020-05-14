@@ -69,6 +69,8 @@ class BFSLevin():
     def __init__(self, use_heuristic=True, use_learned_heuristic=False):
         self._use_heuristic = use_heuristic
         self._use_learned_heuristic = use_learned_heuristic
+        
+        self._k = 32
     
     def get_levin_cost(self, parent, child, p_action, predicted_h):
         if self._use_learned_heuristic:
@@ -89,45 +91,61 @@ class BFSLevin():
         _open = []
         _closed = set()
         
-        self._expanded = 0
-        self._generated = 0
+        expanded = 0
+        generated = 0
         
         heapq.heappush(_open, TreeNode(None, state, 1, 0, 0, None))
         _closed.add(state)
         
+        predicted_h = np.zeros(self._k)
+        
         while len(_open) > 0:
-            node = heapq.heappop(_open)
             
-            self._expanded += 1
+            nodes_to_be_expanded = []
+            x_input_of_states_to_be_expanded = []
+            
+            while len(nodes_to_be_expanded) < self._k and len(_open) > 0:
+                node = heapq.heappop(_open)
+                nodes_to_be_expanded.append(node)
+                x_input_of_states_to_be_expanded.append(node.get_game_state().get_image_representation())
+            
+            expanded += 1
             
             actions = node.get_game_state().successors()
         
-            predicted_h = 0
             if self._use_learned_heuristic:
-                action_distribution_log, predicted_h = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
+                action_distribution_log, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
             else:
-                action_distribution_log = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
+                action_distribution_log = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
             
-            for a in actions:
-                child = node.get_game_state().copy()
-                child.apply_action(a)
+            for i in range(len(nodes_to_be_expanded)):
+                expanded += 1
+            
+                actions = nodes_to_be_expanded[i].get_game_state().successors()                
                 
-                self._generated += 1
-                
-                if child.is_solution(): 
-                    return node.get_g() + 1, self._expanded, self._generated
-                
-                if child not in _closed:
-                    levin_cost = math.log(self.get_levin_cost(node, child, action_distribution_log[a], predicted_h))
+                for a in actions:
+                    child = copy.deepcopy(nodes_to_be_expanded[i].get_game_state())
+                    child.apply_action(a)
                     
-                    child_node = TreeNode(node,
+                    generated += 1
+                    
+                    levin_cost = math.log(self.get_levin_cost(nodes_to_be_expanded[i], 
+                                                              child, 
+                                                              action_distribution_log[i][a], 
+                                                              predicted_h[i]))                
+                    child_node = TreeNode(nodes_to_be_expanded[i],
                                           child, 
-                                          node.get_p() + action_distribution_log[a], 
-                                          node.get_g() + 1,
+                                          nodes_to_be_expanded[i].get_p() + action_distribution_log[i][a], 
+                                          nodes_to_be_expanded[i].get_g() + 1,
                                           levin_cost,
                                           a)
-                    heapq.heappush(_open, child_node)
-                    _closed.add(child)
+                    
+                    if child.is_solution(): 
+                        return nodes_to_be_expanded[i].get_g() + 1, expanded, generated
+                    
+                    if child not in _closed:
+                        heapq.heappush(_open, child_node)
+                        _closed.add(child)  
         
     def _store_trajectory_memory(self, tree_node, expanded):
         """
@@ -159,7 +177,6 @@ class BFSLevin():
         
         return Trajectory(states, actions, solution_costs, expanded)        
      
-#     def search_for_learning(self, state, budget, nn_model):
     def search_for_learning(self, data):
         """
         Performs Best-First LTS bounded by a search budget.
@@ -181,43 +198,55 @@ class BFSLevin():
         heapq.heappush(_open, TreeNode(None, state, 1, 0, 0, None))
         _closed.add(state)
         
+        predicted_h = np.zeros(self._k)
+        
         while len(_open) > 0:
-            node = heapq.heappop(_open)
             
-            expanded += 1
+            nodes_to_be_expanded = []
+            x_input_of_states_to_be_expanded = []
+            
+            while len(nodes_to_be_expanded) < self._k and len(_open) > 0:
+                node = heapq.heappop(_open)
+                nodes_to_be_expanded.append(node)
+                x_input_of_states_to_be_expanded.append(node.get_game_state().get_image_representation())
             
             if expanded == budget:
                 return False, None, expanded, generated, puzzle_name
-            
-            actions = node.get_game_state().successors()
-        
-            predicted_h = 0
+                
             if self._use_learned_heuristic:
-                action_distribution_log, predicted_h = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
+                action_distribution_log, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
             else:
-                action_distribution_log = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
-                            
-            for a in actions:
-                child = copy.deepcopy(node.get_game_state())
-                child.apply_action(a)
+                action_distribution_log = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
+            
+            for i in range(len(nodes_to_be_expanded)):
+                expanded += 1
                 
-                generated += 1
+                actions = nodes_to_be_expanded[i].get_game_state().successors()                
                 
-                levin_cost = math.log(self.get_levin_cost(node, child, action_distribution_log[a], predicted_h))                
-                child_node = TreeNode(node,
-                                      child, 
-                                      node.get_p() + action_distribution_log[a], 
-                                      node.get_g() + 1,
-                                      levin_cost,
-                                      a)
-                
-                if child.is_solution(): 
-                    trajectory = self._store_trajectory_memory(child_node, expanded)
-                    return True, trajectory, expanded, generated, puzzle_name
-                
-                if child not in _closed:
-                    heapq.heappush(_open, child_node)
-                    _closed.add(child)  
+                for a in actions:
+                    child = copy.deepcopy(nodes_to_be_expanded[i].get_game_state())
+                    child.apply_action(a)
+                    
+                    generated += 1
+                    
+                    levin_cost = math.log(self.get_levin_cost(nodes_to_be_expanded[i], 
+                                                              child, 
+                                                              action_distribution_log[i][a], 
+                                                              predicted_h[i]))                
+                    child_node = TreeNode(nodes_to_be_expanded[i],
+                                          child, 
+                                          nodes_to_be_expanded[i].get_p() + action_distribution_log[i][a], 
+                                          nodes_to_be_expanded[i].get_g() + 1,
+                                          levin_cost,
+                                          a)
+                    
+                    if child.is_solution(): 
+                        trajectory = self._store_trajectory_memory(child_node, expanded)
+                        return True, trajectory, expanded, generated, puzzle_name
+                    
+                    if child not in _closed:
+                        heapq.heappush(_open, child_node)
+                        _closed.add(child)  
             
             
             

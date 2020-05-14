@@ -43,7 +43,7 @@ class TwoHeadedConvNet(tf.keras.Model):
         
     def predict(self, x):
         log_softmax, _, pred_h = self.call(x)
-        return log_softmax[0], pred_h[0]
+        return log_softmax, pred_h
         
     def call(self, input_tensor):
         
@@ -109,7 +109,7 @@ class ConvNet(tf.keras.Model):
         
     def predict(self, x):
         log_softmax, _, _ = self.call(x)
-        return log_softmax[0]
+        return log_softmax
         
     def call(self, input_tensor):
         

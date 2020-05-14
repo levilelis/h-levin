@@ -14,7 +14,7 @@ from concurrent.futures.process import ProcessPoolExecutor
    
 def levin_search(states, planner, nn_model, ncpus):
     """
-    This function runs (iterative-deepening) Levin tree search with a learned policy on a set of problems    
+    This function runs (best-first) Levin tree search with a learned policy on a set of problems    
     """   
     total_expanded = 0
     total_generated = 0
@@ -38,16 +38,6 @@ def levin_search(states, planner, nn_model, ncpus):
         total_cost += solution_depth
         
         print("{:d}, {:d}, {:d}".format(solution_depth, expanded, generated))
-    
-#     for _, state in states.items():
-#         start = time.time()
-#         
-#         solution_depth, expanded, generated = planner.search(state, nn_model)
-#         total_expanded += expanded
-#         total_generated += generated
-#         total_cost += solution_depth
-#         
-#         end = time.time()
         
     end_total = time.time()
     print("Cost: {:d} \t Expanded: {:d} \t Generated: {:d}, Time: {:.2f}".format(total_cost,
@@ -57,9 +47,7 @@ def levin_search(states, planner, nn_model, ncpus):
 
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
-    
-    levin_search(states, planner, nn_model, ncpus)
-    
+       
     log_folder = 'logs/'
     models_folder = 'trained_models/' + output
     if not os.path.exists(models_folder):
@@ -100,21 +88,6 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
             if has_found_solution and puzzle_name not in current_solved_puzzles:
                 number_solved += 1
                 current_solved_puzzles.add(puzzle_name)
-            
-#         for file, state in states.items():
-#             state.clear_path()
-#                         
-#             has_found_solution, trajectory, expanded, generated = planner.search_for_learning(state, budget, nn_model)
-#              
-#             total_expanded += expanded
-#             total_generated += generated
-#              
-#             if has_found_solution:
-#                 memory.add_trajectory(trajectory)
-#              
-#             if has_found_solution and file not in current_solved_puzzles:
-#                 number_solved += 1
-#                 current_solved_puzzles.add(file)
         
         end = time.time()
         with open(join(log_folder + 'training_bootstrap_' + output), 'a') as results_file:
@@ -132,7 +105,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
             for _ in range(50):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
-            budget = initial_budget
+#             budget = initial_budget
             memory.clear()
         else:
             budget *= 2
@@ -210,7 +183,7 @@ def main():
         states[file] = s
         
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 2))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 6))
     
     print('Number of cpus available: ', ncpus)
     
@@ -231,9 +204,9 @@ def main():
             nn_model.initialize(loss_name, two_headed_model=False)
         
         if model_file == None:
-            bootstrap_learning_bfs(states, bfs_planner, nn_model, output_file, 500, ncpus)
+            bootstrap_learning_bfs(states, bfs_planner, nn_model, output_file, 1000, ncpus)
         else:
-            nn_model.load_weights(model_file).expect_partial()
+            nn_model.load_weights(model_file)
             levin_search(states, bfs_planner, nn_model, ncpus)
             
 if __name__ == "__main__":
