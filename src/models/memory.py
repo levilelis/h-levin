@@ -2,11 +2,11 @@ import numpy as np
 import sys
 
 class Trajectory():
-    def __init__(self, states, actions, f_values, expanded):
+    def __init__(self, states, actions, solution_costs, expanded):
         self._states = states
         self._actions = actions
-        self._f_values = f_values
         self._expanded = expanded
+        self._solution_costs = solution_costs
         self._is_normalized = False
         
     def get_states(self):
@@ -15,11 +15,11 @@ class Trajectory():
     def get_actions(self):
         return self._actions
     
-    def get_f_values(self):
-        return self._f_values
-    
     def get_expanded(self):
         return self._expanded
+    
+    def get_solution_costs(self):
+        return self._solution_costs
     
     def normalize_expanded(self, factor):
         if not self._is_normalized:

@@ -3,11 +3,10 @@ import sys
 import time
 from os import listdir
 from os.path import isfile, join
-from search.dfs_levin import DFSLevin
 from domains.witness import WitnessState
 from search.bfs_levin import BFSLevin
 from models.memory import Memory
-from models.conv_net import ConvNet
+from models.conv_net import ConvNet, TwoHeadedConvNet
     
    
 def levin_search(states, planner, nn_model):
@@ -94,8 +93,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget):
         
         print('Number solved: ', number_solved)
         if number_solved > 0:
-            loss = 1
-            while loss > 1e-1:
+            for _ in range(100):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
             budget = initial_budget
@@ -159,10 +157,11 @@ def main():
     loss_name = sys.argv[2]
     output_file = sys.argv[3]
     use_heuristic = sys.argv[4]
+    use_learned_heuristic = sys.argv[5]
     model_file = None
         
-    if len(sys.argv) == 6:
-        model_file = sys.argv[5]
+    if len(sys.argv) == 7:
+        model_file = sys.argv[6]
     
     states = {}
     puzzle_files = [f for f in listdir(puzzle_folder) if isfile(join(puzzle_folder, f))]
@@ -173,11 +172,16 @@ def main():
         s = WitnessState()
         s.read_state(join(puzzle_folder, file))
         states[file] = s
-    if use_heuristic == 'y':
-        bfs_planner = BFSLevin(True)
+        
+    if use_heuristic == 'y' and use_learned_heuristic == 'f':
+        bfs_planner = BFSLevin(use_heuristic=True, use_learned_heuristic=False)
+        nn_model = ConvNet((2, 2), 32, 4, loss_name)
+    elif use_heuristic == 'y' and use_learned_heuristic == 'y':
+        bfs_planner = BFSLevin(use_heuristic=True, use_learned_heuristic=True)
+        nn_model = TwoHeadedConvNet((2, 2), 32, 4, loss_name)
     else:
-        bfs_planner = BFSLevin(False)
-    nn_model = ConvNet((2, 2), 32, 4, loss_name)
+        bfs_planner = BFSLevin(use_heuristic=False, use_learned_heuristic=False)
+        nn_model = ConvNet((2, 2), 32, 4, loss_name)
     
     if model_file == None:
         bootstrap_learning_bfs(states, bfs_planner, nn_model, output_file, 500)

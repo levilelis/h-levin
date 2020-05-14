@@ -66,10 +66,13 @@ class TreeNode:
 
 class BFSLevin():
     
-    def __init__(self, use_heuristic=True):
+    def __init__(self, use_heuristic=True, use_learned_heuristic=False):
         self._use_heuristic = use_heuristic
+        self._use_learned_heuristic = use_learned_heuristic
     
-    def get_levin_cost(self, parent, child, p_action):
+    def get_levin_cost(self, parent, child, p_action, predicted_h):
+        if self._use_learned_heuristic:
+            return (predicted_h + parent.get_g()) - (parent.get_p() + p_action)
         if self._use_heuristic:
             return (child.heuristic_value() + parent.get_g() + 1) - (parent.get_p() + p_action)
         return (parent.get_g() + 1) - (parent.get_p() + p_action)
@@ -96,7 +99,11 @@ class BFSLevin():
             
             actions = node.get_game_state().successors()
         
-            action_distribution_log = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
+            predicted_h = 0
+            if self._use_learned_heuristic:
+                action_distribution_log, predicted_h = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
+            else:
+                action_distribution_log = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
             
             for a in actions:
                 child = node.get_game_state().copy()
@@ -108,7 +115,7 @@ class BFSLevin():
                     return node.get_g() + 1, self._expanded, self._generated
                 
                 if child not in _closed:
-                    levin_cost = math.log(self.get_levin_cost(node, child, action_distribution_log[a]))
+                    levin_cost = math.log(self.get_levin_cost(node, child, action_distribution_log[a], predicted_h))
                     
                     child_node = TreeNode(node,
                                           child, 
@@ -128,28 +135,26 @@ class BFSLevin():
         """
         states = []
         actions = []
+        solution_costs = []
         
         state = tree_node.get_parent()
         action = tree_node.get_action()
+        cost = 1
         
         while not state.get_parent() is None:
             states.append(state.get_game_state())
             actions.append(action)
+            solution_costs.append(cost)
             
             action = state.get_action()
             state = state.get_parent()
+            cost += 1
             
         states.append(state.get_game_state())
         actions.append(action)
+        solution_costs.append(cost)
         
-        return Trajectory(states, actions, None, expanded)        
-        
-#     def learn(self, memory):        
-#         """
-#         Runs the training step of the neural network with the training data stored in
-#         the variable memory. 
-#         """
-#         return self.nn.train_with_memory(memory)
+        return Trajectory(states, actions, solution_costs, expanded)        
      
     def search_for_learning(self, state, budget, nn_model):
         """
@@ -177,7 +182,11 @@ class BFSLevin():
             
             actions = node.get_game_state().successors()
         
-            action_distribution_log = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
+            predicted_h = 0
+            if self._use_learned_heuristic:
+                action_distribution_log, predicted_h = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
+            else:
+                action_distribution_log = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
             
             for a in actions:
                 child = copy.deepcopy(node.get_game_state())
@@ -185,7 +194,7 @@ class BFSLevin():
                 
                 generated += 1
                 
-                levin_cost = math.log(self.get_levin_cost(node, child, action_distribution_log[a]))                
+                levin_cost = math.log(self.get_levin_cost(node, child, action_distribution_log[a], predicted_h))                
                 child_node = TreeNode(node,
                                       child, 
                                       node.get_p() + action_distribution_log[a], 
@@ -199,14 +208,7 @@ class BFSLevin():
                 
                 if child not in _closed:
                     heapq.heappush(_open, child_node)
-                    _closed.add(child)
-
-            
-#     def save_model(self, model_name):
-#         """
-#         Saves the weight of the current neural network
-#         """
-#         self.nn.save_weights(model_name)    
+                    _closed.add(child)  
             
             
             
