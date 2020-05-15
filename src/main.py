@@ -138,11 +138,11 @@ def main():
     parser.add_argument('-m', action='store', dest='model_name',
                         help='Name of the folder of the neural model')
     
-    parser.add_argument('--use-default-heuristic', action='store_true', default=False,
+    parser.add_argument('--default-heuristic', action='store_true', default=False,
                         dest='use_heuristic',
                         help='Use the default heuristic as input')
     
-    parser.add_argument('--learn-a-heuristic', action='store_true', default=False,
+    parser.add_argument('--learned-heuristic', action='store_true', default=False,
                         dest='use_learned_heuristic',
                         help='Use/learn a heuristic')
     
