@@ -210,7 +210,7 @@ class BFSLevin():
                 nodes_to_be_expanded.append(node)
                 x_input_of_states_to_be_expanded.append(node.get_game_state().get_image_representation())
             
-            if expanded == budget:
+            if expanded >= budget:
                 return False, None, expanded, generated, puzzle_name
                 
             if self._use_learned_heuristic:

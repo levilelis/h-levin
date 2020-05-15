@@ -10,6 +10,7 @@ from models.memory import Memory
 from models.conv_net import ConvNet, TwoHeadedConvNet
 from models.model_wrapper import KerasManager, KerasModel
 from concurrent.futures.process import ProcessPoolExecutor
+import argparse
     
    
 def levin_search(states, planner, nn_model, ncpus):
@@ -47,7 +48,7 @@ def levin_search(states, planner, nn_model, ncpus):
 
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
-       
+        
     log_folder = 'logs/'
     models_folder = 'trained_models/' + output
     if not os.path.exists(models_folder):
@@ -123,66 +124,49 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
 def main():
     """
     It is possible to use this system to either train a new neural network model through the bootstrap system and
-    Levin tree search (LTS) algorithm, or to use a trained neural network with LTS. 
-    
-    Examples of usage:
-        For learning a new mode use the following:
-        
-        main bootstrap_dfs_lvn_learning_planner puzzles_1x2 puzzles_1x2_output 1.0 1024
-        
-        The program will run LTS on the set of puzzles in the folder puzzles_1x2. The learned model will be saved in
-        the folder called puzzles_1x2_output. The dropout rate is set to 1.0, which means that no dropout is used. The
-        batch size is set to 1024. The program will generate the following log files:
-            
-            File puzzles_1x2_output_log_training_bootstrap containing in each line the id of the LTS iteration,
-            number of problems solved in that iteration, number of problems yet to be solved, training set size
-            (including all possible reflection of the image of puzzles solved), and time spent size the beginning
-            of the learning process. 
-            
-            File puzzles_1x2_output_puzzle_names_ordering_bootstrap containing the id of a given iteration of LTS,
-            followed by a list of name of the puzzles solved in that iteration, and the LTS search budget used
-            to solve those problems. The budget is computed as e^b, where b is the budget. 
-            
-            Folder puzzles_1x2_output_models with the last neural network model trained by the system.  
-        
-        For using a learned model to solve a set of puzzles use the following:
-        
-        main learned_planner puzzles_1x2 puzzles_1x2_output puzzles_1x2_output_models
-        
-        The program will run LTS on the set of problems in the folder puzzles_1x2 with the model encountered in the folder
-        puzzles_1x2_output_models. The program will then generate two files as output:
-        
-            puzzles_1x2_output_log_learned_bootstrap, which is exactly as the log file described above while learning a model.
-        
-            puzzles_1x2_output_puzzle_names_ordering_bootstrap_learned_model, which is exactly as the file with the puzzle 
-            names described above while learning a model.          
+    Levin tree search (LTS) algorithm, or to use a trained neural network with LTS.         
     """
-    if len(sys.argv) < 3:
-        print('Usage for learning a new model: main folder-with-puzzles output-file loss-name use-heuristic model-to-be-loaded')
-        print('Loss can be either LevinLoss or CrossEntropyLoss')
-        print('Use heuristic is either y or n')
-        print('Model to be loaded is optional. If name is not provided, then a new model will be trained.')
-        return
-    puzzle_folder = sys.argv[1]
-    loss_name = sys.argv[2]
-    output_file = sys.argv[3]
-    use_heuristic = sys.argv[4]
-    use_learned_heuristic = sys.argv[5]
-    model_file = None
-        
-    if len(sys.argv) == 7:
-        model_file = sys.argv[6]
+    
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('-l', action='store', dest='loss_function',
+                        help='Loss Function')
+    
+    parser.add_argument('-p', action='store', dest='problems_folder',
+                        help='Folder with problem instances')
+    
+    parser.add_argument('-m', action='store', dest='model_name',
+                        help='Name of the folder of the neural model')
+    
+    parser.add_argument('--use-default-heuristic', action='store_true', default=False,
+                        dest='use_heuristic',
+                        help='Use the default heuristic as input')
+    
+    parser.add_argument('--learn-a-heuristic', action='store_true', default=False,
+                        dest='use_learned_heuristic',
+                        help='Use/learn a heuristic')
+    
+    parser.add_argument('--blind-search', action='store_true', default=False,
+                        dest='blind_search',
+                        help='Perform blind search')
+    
+    parser.add_argument('--learn', action='store_true', default=False,
+                        dest='learning_mode',
+                        help='Train as neural model out of the instances from the problem folder')
+    
+    parameters = parser.parse_args()
+    
     
     states = {}
-    puzzle_files = [f for f in listdir(puzzle_folder) if isfile(join(puzzle_folder, f))]
+    puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
     
     for file in puzzle_files:
         if '.' in file:
             continue
         s = WitnessState()
-        s.read_state(join(puzzle_folder, file))
+        s.read_state(join(parameters.problems_folder, file))
         states[file] = s
-        
+            
     KerasManager.register('KerasModel', KerasModel)
     ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 6))
     
@@ -191,22 +175,26 @@ def main():
     with KerasManager() as manager:
                 
         nn_model = manager.KerasModel()
-    
-        if use_heuristic == 'y' and use_learned_heuristic == 'f':
-            bfs_planner = BFSLevin(use_heuristic=True, use_learned_heuristic=False)
-            nn_model.initialize(loss_name, two_headed_model=False)
-    
-        elif use_heuristic == 'y' and use_learned_heuristic == 'y':
-            bfs_planner = BFSLevin(use_heuristic=True, use_learned_heuristic=True)
-            nn_model.initialize(loss_name, two_headed_model=True)            
-        else:
-            bfs_planner = BFSLevin(use_heuristic=False, use_learned_heuristic=False)
-            nn_model.initialize(loss_name, two_headed_model=False)
         
-        if model_file == None:
-            bootstrap_learning_bfs(states, bfs_planner, nn_model, output_file, 1000, ncpus)
+        bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic)
+    
+        if parameters.use_heuristic and not parameters.use_learned_heuristic:
+            nn_model.initialize(parameters.loss_function, two_headed_model=False)
+
+        elif parameters.use_heuristic and parameters.use_learned_heuristic:
+            nn_model.initialize(parameters.loss_function, two_headed_model=True)
+                        
         else:
-            nn_model.load_weights(model_file)
+            nn_model.initialize(parameters.loss_function, two_headed_model=False)
+        
+        if parameters.learning_mode:
+            bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)            
+        elif parameters.blind_search:
+            print('Performing search with a randomly initialized model.')
+            levin_search(states, bfs_planner, nn_model, ncpus)
+        else:
+            print('Loading Model: ', parameters.model_name)
+            nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
             levin_search(states, bfs_planner, nn_model, ncpus)
             
 if __name__ == "__main__":
