@@ -102,10 +102,11 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
         
         print('Number solved: ', number_solved)
         if number_solved > 0:
-            for _ in range(50):
+            for _ in range(100):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
-#             budget = initial_budget
+            if number_solved < 20:
+                budget *= 2
             memory.clear()
         else:
             budget *= 2
@@ -197,8 +198,7 @@ def main():
     
         elif use_heuristic == 'y' and use_learned_heuristic == 'y':
             bfs_planner = BFSLevin(use_heuristic=True, use_learned_heuristic=True)
-            nn_model.initialize(loss_name, two_headed_model=True)
-            
+            nn_model.initialize(loss_name, two_headed_model=True)            
         else:
             bfs_planner = BFSLevin(use_heuristic=False, use_learned_heuristic=False)
             nn_model.initialize(loss_name, two_headed_model=False)
