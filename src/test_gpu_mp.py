@@ -40,6 +40,15 @@ def test_func(data):
 if __name__ == '__main__':
     ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 6))
     
+    import tensorflow as tf
+    MEMORY_LIMIT = 1024
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=MEMORY_LIMIT)])
+        except RuntimeError as e:
+            print(e)
+    
     with KerasManager() as manager:
         print('Main', os.getpid())
         kerasmodel = manager.KerasModel()
