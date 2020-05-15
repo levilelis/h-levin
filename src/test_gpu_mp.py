@@ -1,11 +1,8 @@
-
 import os
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = ''
 from multiprocessing import Lock
 from multiprocessing.managers import BaseManager
-
-from models.conv_net import ConvNet
 
 import numpy as np
 from concurrent.futures.process import ProcessPoolExecutor
@@ -17,7 +14,12 @@ class KerasModel():
         self.model = None
 
     def initialize(self):
-        self.model = ConvNet((2, 2), 32, 4, 'CrossEntropyLoss')
+        import tensorflow
+#         self.model = ConvNet((2, 2), 32, 4, 'CrossEntropyLoss')
+        self.model = tensorflow.keras.Sequential(
+            [tensorflow.keras.layers.Dense(1, activation='relu', input_shape=(10,)),
+             ])
+
         self.model.compile('sgd', 'mse')
 
     def predict(self, arr):
@@ -32,7 +34,7 @@ class KerasManager(BaseManager):
 KerasManager.register('KerasModel', KerasModel)
 
 def test_func(data):
-    x = np.random.random((1, 12, 12, 9))
+    x = np.random.random((1, 10))
     return data.predict(x)
 
 if __name__ == '__main__':
