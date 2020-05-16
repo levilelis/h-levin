@@ -75,7 +75,7 @@ class BFSLevin():
     def get_levin_cost(self, parent, child, p_action, predicted_h):
         if self._use_learned_heuristic:
             return (predicted_h + parent.get_g()) - (parent.get_p() + p_action)
-        if self._use_heuristic:
+        elif self._use_heuristic:
             return (child.heuristic_value() + parent.get_g() + 1) - (parent.get_p() + p_action)
         return (parent.get_g() + 1) - (parent.get_p() + p_action)
     
@@ -83,7 +83,7 @@ class BFSLevin():
         """
         Performs Best-First LTS . 
         
-        Returns solution cost. 
+        Returns solution cost, number of nodes expanded, and generated
         """
         state = data[0] 
         nn_model = data[1]

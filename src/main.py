@@ -179,22 +179,16 @@ def main():
         
         bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic)
     
-        if parameters.use_heuristic and not parameters.use_learned_heuristic:
-            nn_model.initialize(parameters.loss_function, two_headed_model=False)
-
-        elif parameters.use_heuristic and parameters.use_learned_heuristic:
-            nn_model.initialize(parameters.loss_function, two_headed_model=True)
-                        
+        if parameters.use_learned_heuristic:
+            nn_model.initialize(parameters.loss_function, two_headed_model=True)     
         else:
             nn_model.initialize(parameters.loss_function, two_headed_model=False)
         
         if parameters.learning_mode:
             bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)            
         elif parameters.blind_search:
-            print('Performing search with a randomly initialized model.')
             levin_search(states, bfs_planner, nn_model, ncpus)
         else:
-            print('Loading Model: ', parameters.model_name)
             nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
             levin_search(states, bfs_planner, nn_model, ncpus)
             
