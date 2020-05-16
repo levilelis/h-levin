@@ -129,7 +129,8 @@ def main():
     
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('-l', action='store', dest='loss_function',
+    parser.add_argument('-l', action='store', dest='loss_function', 
+                        default='LevinLoss', 
                         help='Loss Function')
     
     parser.add_argument('-p', action='store', dest='problems_folder',
