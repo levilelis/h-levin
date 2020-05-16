@@ -1,19 +1,18 @@
 import os
-import sys
 import time
-import numpy as np
 from os import listdir
 from os.path import isfile, join
 from domains.witness import WitnessState
 from search.bfs_levin import BFSLevin
 from models.memory import Memory
-from models.conv_net import ConvNet, TwoHeadedConvNet
 from models.model_wrapper import KerasManager, KerasModel
 from concurrent.futures.process import ProcessPoolExecutor
 import argparse
+from search.a_star import AStar
+from search.gbfs import GBFS
     
    
-def levin_search(states, planner, nn_model, ncpus):
+def search(states, planner, nn_model, ncpus):
     """
     This function runs (best-first) Levin tree search with a learned policy on a set of problems    
     """   
@@ -44,8 +43,7 @@ def levin_search(states, planner, nn_model, ncpus):
     print("Cost: {:d} \t Expanded: {:d} \t Generated: {:d}, Time: {:.2f}".format(total_cost,
                                                                                  total_expanded, 
                                                                                 total_generated, 
-                                                                                end_total - start_total))    
-
+                                                                                end_total - start_total))
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
         
@@ -118,7 +116,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
     
     nn_model.save_weights(join(models_folder, 'model_weights')) 
     
-    levin_search(states, planner, nn_model, ncpus)
+    search(states, planner, nn_model, ncpus)
 
 
 def main():
@@ -138,6 +136,9 @@ def main():
     
     parser.add_argument('-m', action='store', dest='model_name',
                         help='Name of the folder of the neural model')
+    
+    parser.add_argument('-a', action='store', dest='search_algorithm',
+                        help='Name of the search algorithm (Levin or AStar)')
     
     parser.add_argument('--default-heuristic', action='store_true', default=False,
                         dest='use_heuristic',
@@ -169,7 +170,7 @@ def main():
         states[file] = s
             
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 6))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 2))
     
     print('Number of cpus available: ', ncpus)
     
@@ -177,20 +178,48 @@ def main():
                 
         nn_model = manager.KerasModel()
         
-        bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic)
-    
-        if parameters.use_learned_heuristic:
-            nn_model.initialize(parameters.loss_function, two_headed_model=True)     
-        else:
-            nn_model.initialize(parameters.loss_function, two_headed_model=False)
+        if parameters.search_algorithm == 'Levin':
         
-        if parameters.learning_mode:
-            bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)            
-        elif parameters.blind_search:
-            levin_search(states, bfs_planner, nn_model, ncpus)
-        else:
-            nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-            levin_search(states, bfs_planner, nn_model, ncpus)
+            bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic)
+        
+            if parameters.use_learned_heuristic:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     
+            else:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
+            
+            if parameters.learning_mode:
+                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)            
+            elif parameters.blind_search:
+                search(states, bfs_planner, nn_model, ncpus)
+            else:
+                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                search(states, bfs_planner, nn_model, ncpus)
+        
+        if parameters.search_algorithm == 'AStar':
+            bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic)
+            
+            if parameters.learning_mode and parameters.use_learned_heuristic:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
+                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)
+            elif parameters.use_learned_heuristic:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
+                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                search(states, bfs_planner, nn_model, ncpus)
+            else:
+                search(states, bfs_planner, nn_model, ncpus)  
+                
+        if parameters.search_algorithm == 'GBFS':
+            bfs_planner = GBFS(parameters.use_learned_heuristic)
+            
+            if parameters.learning_mode:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
+                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)
+            elif parameters.use_learned_heuristic:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
+                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                search(states, bfs_planner, nn_model, ncpus)
+            else:
+                search(states, bfs_planner, nn_model, ncpus)      
             
 if __name__ == "__main__":
     main()

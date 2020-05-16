@@ -74,10 +74,12 @@ class BFSLevin():
     
     def get_levin_cost(self, parent, child, p_action, predicted_h):
         if self._use_learned_heuristic:
-            return (predicted_h + parent.get_g()) - (parent.get_p() + p_action)
+            if predicted_h < 0:
+                predicted_h = 0
+            return math.log(predicted_h + parent.get_g() + 1) - (parent.get_p() + p_action)
         elif self._use_heuristic:
-            return (child.heuristic_value() + parent.get_g() + 1) - (parent.get_p() + p_action)
-        return (parent.get_g() + 1) - (parent.get_p() + p_action)
+            return math.log(child.heuristic_value() + parent.get_g() + 1) - (parent.get_p() + p_action)
+        return math.log(parent.get_g() + 1) - (parent.get_p() + p_action)
     
     def search(self, data):
         """
@@ -110,9 +112,7 @@ class BFSLevin():
                 x_input_of_states_to_be_expanded.append(node.get_game_state().get_image_representation())
             
             expanded += 1
-            
-            actions = node.get_game_state().successors()
-        
+                    
             if self._use_learned_heuristic:
                 action_distribution_log, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
             else:
@@ -129,10 +129,10 @@ class BFSLevin():
                     
                     generated += 1
                     
-                    levin_cost = math.log(self.get_levin_cost(nodes_to_be_expanded[i], 
-                                                              child, 
-                                                              action_distribution_log[i][a], 
-                                                              predicted_h[i]))                
+                    levin_cost = self.get_levin_cost(nodes_to_be_expanded[i], 
+                                                    child, 
+                                                    action_distribution_log[i][a], 
+                                                    predicted_h[i])
                     child_node = TreeNode(nodes_to_be_expanded[i],
                                           child, 
                                           nodes_to_be_expanded[i].get_p() + action_distribution_log[i][a], 
@@ -229,10 +229,10 @@ class BFSLevin():
                     
                     generated += 1
                     
-                    levin_cost = math.log(self.get_levin_cost(nodes_to_be_expanded[i], 
-                                                              child, 
-                                                              action_distribution_log[i][a], 
-                                                              predicted_h[i]))                
+                    levin_cost = self.get_levin_cost(nodes_to_be_expanded[i], 
+                                                    child, 
+                                                    action_distribution_log[i][a], 
+                                                    predicted_h[i])                
                     child_node = TreeNode(nodes_to_be_expanded[i],
                                           child, 
                                           nodes_to_be_expanded[i].get_p() + action_distribution_log[i][a], 
@@ -247,6 +247,3 @@ class BFSLevin():
                     if child not in _closed:
                         heapq.heappush(_open, child_node)
                         _closed.add(child)  
-            
-            
-            

@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 
 from abc import ABC
-import math
 
 class LossFunction(ABC):
     
@@ -69,5 +68,19 @@ class LevinMSELoss(LossFunction):
         
         solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
         loss += 0.5 * self.mse(solution_costs_tf, logits_h)
+
+        return loss
+    
+class MSELoss(LossFunction):
+    
+    def __init__(self):
+        self.mse = tf.keras.losses.MeanSquaredError()
+    
+    def compute_loss(self, trajectory, model):
+        images = [s.get_image_representation() for s in trajectory.get_states()]           
+        logits_h  = model(np.array(images))
+        
+        solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
+        loss = self.mse(solution_costs_tf, logits_h)
 
         return loss
