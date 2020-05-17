@@ -8,7 +8,7 @@ class KerasModel():
         self.model = None
 
     def initialize(self, loss_name, search_algorithm, two_headed_model=False):
-        if search_algorithm == 'Levin':
+        if search_algorithm == 'Levin' or search_algorithm == 'LevinMult':
             if two_headed_model:
                 self.model = TwoHeadedConvNet((2, 2), 32, 4, loss_name)
             else:

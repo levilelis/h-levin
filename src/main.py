@@ -10,6 +10,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 import argparse
 from search.a_star import AStar
 from search.gbfs import GBFS
+from search.bfs_levin_mult import BFSLevinMult
     
    
 def search(states, planner, nn_model, ncpus):
@@ -188,6 +189,24 @@ def main():
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
             
             if parameters.learning_mode:
+                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)            
+            elif parameters.blind_search:
+                search(states, bfs_planner, nn_model, ncpus)
+            else:
+                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                search(states, bfs_planner, nn_model, ncpus)
+                
+        if parameters.search_algorithm == 'LevinMult':
+        
+            bfs_planner = BFSLevinMult(parameters.use_heuristic, parameters.use_learned_heuristic)
+        
+            if parameters.use_learned_heuristic:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     
+            else:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
+            
+            if parameters.learning_mode:
+                print(type(nn_model))
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus)

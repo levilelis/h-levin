@@ -64,7 +64,7 @@ class TreeNode:
         return self._action
         
 
-class BFSLevin():
+class BFSLevinMult():
     
     def __init__(self, use_heuristic=True, use_learned_heuristic=False):
         self._use_heuristic = use_heuristic
@@ -73,13 +73,20 @@ class BFSLevin():
         self._k = 32
     
     def get_levin_cost(self, parent, child, p_action, predicted_h):
+        
+        d = parent.get_g() + 1
+        d_over_pi = d / ((parent.get_p() * p_action) + np.nextafter(0, 1))
+        
         if self._use_learned_heuristic:
             if predicted_h < 0:
                 predicted_h = 0
-            return math.log(predicted_h + parent.get_g() + 1) - (parent.get_p() + p_action)
-        elif self._use_heuristic:
-            return math.log(child.heuristic_value() + parent.get_g() + 1) - (parent.get_p() + p_action)
-        return math.log(parent.get_g() + 1) - (parent.get_p() + p_action)
+            estimated_future_expansions = predicted_h / (((parent.get_p() * p_action) ** ((predicted_h + d) / d)) + np.nextafter(0, 1)) 
+#             return (predicted_h + parent.get_g() + 1)/((parent.get_p() * p_action) + np.nextafter(0, 1))
+        else:
+            estimated_future_expansions = child.heuristic_value() / ((parent.get_p() * p_action) ** ((child.heuristic_value() + d) / d) + np.nextafter(0, 1))
+            
+        return d_over_pi + estimated_future_expansions
+
     
     def search(self, data):
         """
@@ -114,10 +121,10 @@ class BFSLevin():
             expanded += 1
                     
             if self._use_learned_heuristic:
-                action_distribution_log, _, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
+                _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
             else:
-                action_distribution_log, _ = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
-            
+                _, action_distribution = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
+                            
             for i in range(len(nodes_to_be_expanded)):
                 expanded += 1
             
@@ -131,11 +138,11 @@ class BFSLevin():
                     
                     levin_cost = self.get_levin_cost(nodes_to_be_expanded[i], 
                                                     child, 
-                                                    action_distribution_log[i][a], 
+                                                    action_distribution[i][a], 
                                                     predicted_h[i])
                     child_node = TreeNode(nodes_to_be_expanded[i],
                                           child, 
-                                          nodes_to_be_expanded[i].get_p() + action_distribution_log[i][a], 
+                                          nodes_to_be_expanded[i].get_p() * action_distribution[i][a], 
                                           nodes_to_be_expanded[i].get_g() + 1,
                                           levin_cost,
                                           a)
@@ -214,10 +221,10 @@ class BFSLevin():
                 return False, None, expanded, generated, puzzle_name
                 
             if self._use_learned_heuristic:
-                action_distribution_log, _, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
+                _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
             else:
-                action_distribution_log, _ = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
-            
+                _, action_distribution = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
+                            
             for i in range(len(nodes_to_be_expanded)):
                 expanded += 1
                 
@@ -231,11 +238,11 @@ class BFSLevin():
                     
                     levin_cost = self.get_levin_cost(nodes_to_be_expanded[i], 
                                                     child, 
-                                                    action_distribution_log[i][a], 
+                                                    action_distribution[i][a], 
                                                     predicted_h[i])                
                     child_node = TreeNode(nodes_to_be_expanded[i],
                                           child, 
-                                          nodes_to_be_expanded[i].get_p() + action_distribution_log[i][a], 
+                                          nodes_to_be_expanded[i].get_p() * action_distribution[i][a], 
                                           nodes_to_be_expanded[i].get_g() + 1,
                                           levin_cost,
                                           a)

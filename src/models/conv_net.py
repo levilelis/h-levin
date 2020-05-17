@@ -98,8 +98,8 @@ class TwoHeadedConvNet(tf.keras.Model):
             raise InvalidLossFunction
         
     def predict(self, x):
-        log_softmax, _, pred_h = self.call(x)
-        return log_softmax, pred_h
+        log_softmax, x_softmax, _, pred_h = self.call(x)
+        return log_softmax, x_softmax, pred_h
         
     def call(self, input_tensor):
         
@@ -111,11 +111,12 @@ class TwoHeadedConvNet(tf.keras.Model):
         x1 = self.dense11(x_flatten)
         logits_pi = self.dense12(x1)
         x_log_softmax = tf.nn.log_softmax(logits_pi)
+        x_softmax = tf.nn.softmax(logits_pi)
         
         x2 = self.dense21(x_flatten)
         logits_h = self.dense22(x2)
         
-        return x_log_softmax, logits_pi, logits_h
+        return x_log_softmax, x_softmax, logits_pi, logits_h
     
     def train_with_memory(self, memory):
         losses = []
@@ -164,8 +165,8 @@ class ConvNet(tf.keras.Model):
             raise InvalidLossFunction
         
     def predict(self, x):
-        log_softmax, _, _ = self.call(x)
-        return log_softmax
+        log_softmax, x_softmax, _ = self.call(x)
+        return log_softmax, x_softmax
         
     def call(self, input_tensor):
         

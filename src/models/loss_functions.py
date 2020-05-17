@@ -43,7 +43,7 @@ class CrossEntropyMSELoss(LossFunction):
     def compute_loss(self, trajectory, model):
         images = [s.get_image_representation() for s in trajectory.get_states()]
         actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
-        _, logits_pi, logits_h  = model(np.array(images))
+        _, _, logits_pi, logits_h  = model(np.array(images))
         
         loss = self.cross_entropy_loss(actions_one_hot, logits_pi) 
         
@@ -61,7 +61,7 @@ class LevinMSELoss(LossFunction):
     def compute_loss(self, trajectory, model):
         images = [s.get_image_representation() for s in trajectory.get_states()]           
         actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
-        _, logits_pi, logits_h  = model(np.array(images))
+        _, _, logits_pi, logits_h  = model(np.array(images))
         loss = self.cross_entropy_loss(actions_one_hot, logits_pi)
         
         loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_expanded(), dtype=tf.float64))
