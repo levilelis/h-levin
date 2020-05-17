@@ -48,7 +48,7 @@ class CrossEntropyMSELoss(LossFunction):
         loss = self.cross_entropy_loss(actions_one_hot, logits_pi) 
         
         solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
-        loss += 0.5 * self.mse(solution_costs_tf, logits_h)
+        loss += self.mse(solution_costs_tf, logits_h)
         
         return loss
     
@@ -67,7 +67,7 @@ class LevinMSELoss(LossFunction):
         loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_expanded(), dtype=tf.float64))
         
         solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
-        loss += 0.5 * self.mse(solution_costs_tf, logits_h)
+        loss += self.mse(solution_costs_tf, logits_h)
 
         return loss
     

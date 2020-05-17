@@ -171,7 +171,7 @@ def main():
         states[file] = s
             
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 2))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 6))
     
     print('Number of cpus available: ', ncpus)
     
@@ -228,7 +228,7 @@ def main():
                 search(states, bfs_planner, nn_model, ncpus)  
                 
         if parameters.search_algorithm == 'GBFS':
-            bfs_planner = GBFS(parameters.use_learned_heuristic)
+            bfs_planner = GBFS(parameters.use_heuristic, parameters.use_learned_heuristic)
             
             if parameters.learning_mode:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)

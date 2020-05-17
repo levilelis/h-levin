@@ -77,6 +77,8 @@ class AStar():
         self._k = 32
     
     def get_f_cost(self, child, g, predicted_h):
+        if self._use_learned_heuristic and self._use_heuristic:
+            return max(predicted_h, child.heuristic_value()) + g 
         if self._use_learned_heuristic:
             return predicted_h + g
         elif self._use_heuristic:

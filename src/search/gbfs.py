@@ -64,15 +64,19 @@ class GBFSTreeNode:
 
 class GBFS():
     
-    def __init__(self, use_learned_heuristic=False):
+    def __init__(self, use_heuristic=True, use_learned_heuristic=False):
         self._use_learned_heuristic = use_learned_heuristic
+        self._use_heuristic = use_heuristic
         
         self._k = 32
     
     def get_h_cost(self, child, predicted_h):
-        if self._use_learned_heuristic:
+        if self._use_heuristic and self._use_learned_heuristic:
+            return max(predicted_h, child.heuristic_value())
+        elif self._use_learned_heuristic:
             return predicted_h
-        return child.heuristic_value()
+        else:
+            return child.heuristic_value()
     
     def search(self, data):
         """
