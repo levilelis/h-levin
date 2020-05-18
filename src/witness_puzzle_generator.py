@@ -14,7 +14,7 @@ class PuzzleGenerator:
     a path from the initial position to the goal position. Then, bullets with different colors
     are placed into different regions of the puzzle (i.e., set of reachable cells). 
     """
-    def generate_paths(self, lines, columns, line_init, column_init, line_goal, column_goal, budget=10000):
+    def generate_paths(self, lines, columns, line_init, column_init, line_goal, column_goal, budget=100000):
         """
         Generates all possible paths for a grid with starting position at (line_init, column_init)
         and finishing position at (line_goal, column_goal). The grid is defined by a grid of size
@@ -123,6 +123,10 @@ class PuzzleGenerator:
             if size[0] >= 4:
                 max_difficulty = True
                 minimum_number_regions = 4
+            if size[0] >= 6:
+                max_difficulty = True
+                minimum_number_regions = 5    
+            
                                
             print('Generating Paths...')
             
@@ -185,8 +189,8 @@ def main():
 #     puzzle_sizes = [(1, 2), (1, 3), (2, 2), (3, 3), (4, 4)]
 #     number_puzzles = [10, 50, 300, 1000, 1000]
 
-    puzzle_sizes = [(4, 4)]
-    number_puzzles = [1000]
+    puzzle_sizes = [(6, 6)]
+    number_puzzles = [4000]
     
     #bullet_probability = [0.1, 0.5, 0.9]
     generator = PuzzleGenerator()
