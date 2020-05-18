@@ -173,6 +173,9 @@ class PuzzleGenerator:
                     
                     if len(puzzles_generated[size]) == number_puzzles[indice_number_puzzle]:
                         break
+                if len(puzzles_generated[size]) == 0:
+                    print('No paths with the minimum number of partitions')
+                    break
                 
             indice_number_puzzle += 1
 
