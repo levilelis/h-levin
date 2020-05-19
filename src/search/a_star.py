@@ -132,7 +132,6 @@ class AStar():
                 if len(children_to_be_evaluated) == self._k or len(_open) == 0:
                     if self._use_learned_heuristic:
                         predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
-                        self.predict_calls += 1
                         
                     for i in range(len(children_to_be_evaluated)):
                 

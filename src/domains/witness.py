@@ -35,7 +35,7 @@ class WitnessState(Environment):
     # Possible colors for separable bullets
     _colors = ['b', 'r', 'g', 'c', 'y', 'm']
     
-    def __init__(self, lines=1, columns=1, line_init=0, column_init=0, line_goal=1, column_goal=1, max_lines = 6, max_columns=6):
+    def __init__(self, lines=1, columns=1, line_init=0, column_init=0, line_goal=1, column_goal=1, max_lines=8, max_columns=8):
         """
         GameState's constructor. The constructor receives as input the variable lines and columns,
          which specify the number of lines and columns of the puzzle; line_init and column_init speficy
