@@ -76,7 +76,7 @@ class AStar():
         
         self._k = 32
     
-    def get_f_cost(self, child, g, predicted_h):
+    def get_f_cost(self, child, g, predicted_h):       
         if self._use_learned_heuristic and self._use_heuristic:
             return max(predicted_h, child.heuristic_value()) + g 
         if self._use_learned_heuristic:
@@ -102,7 +102,7 @@ class AStar():
         
         predicted_h = np.zeros(self._k)
         
-        heapq.heappush(_open, AStarTreeNode(None, state, 0, 0, None))
+        heapq.heappush(_open, AStarTreeNode(None, state, 0, 0, -1))
         _closed.add(state)
         
         children_to_be_evaluated = []
@@ -112,8 +112,8 @@ class AStar():
             node = heapq.heappop(_open)
             
             expanded += 1
-            
-            actions = node.get_game_state().successors()             
+                            
+            actions = node.get_game_state().successors_parent_pruning(node.get_action())             
                 
             for a in actions:
                 child = copy.deepcopy(node.get_game_state())
@@ -132,6 +132,7 @@ class AStar():
                 if len(children_to_be_evaluated) == self._k or len(_open) == 0:
                     if self._use_learned_heuristic:
                         predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                        self.predict_calls += 1
                         
                     for i in range(len(children_to_be_evaluated)):
                 
@@ -195,7 +196,7 @@ class AStar():
         expanded = 0
         generated = 0
         
-        heapq.heappush(_open, AStarTreeNode(None, state, 1, 0, None))
+        heapq.heappush(_open, AStarTreeNode(None, state, 1, 0, -1))
         _closed.add(state)
         
         predicted_h = np.zeros(self._k)
@@ -211,7 +212,7 @@ class AStar():
             if expanded >= budget:
                 return False, None, expanded, generated, puzzle_name
             
-            actions = node.get_game_state().successors()             
+            actions = node.get_game_state().successors_parent_pruning(node.get_action())             
                 
             for a in actions:
                 child = copy.deepcopy(node.get_game_state())

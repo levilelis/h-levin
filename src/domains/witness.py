@@ -326,7 +326,7 @@ class WitnessState(Environment):
         
         self._dots[self._line_tip][self._column_tip] = 1
         
-    def clear_path(self):
+    def reset(self):
         """
         This method resets a path that has be written to the state. This is achieved by reseting the following structures:
         (1) self._v_seg
@@ -464,6 +464,41 @@ class WitnessState(Environment):
         if state[1] > 0 and self._v_seg[state[0]][state[1]] == 0:
             children.append((state[0], state[1]-1))
         return children
+    
+    
+    def successors_parent_pruning(self, op):
+        """
+        Successor function used by planners trying to solve the puzzle. The method returns
+        a list with legal actions for the state. The valid actions for the domain are {U, D, L, R}.
+        
+        The tip of the snake can move to an adjacent intersection in the grid as long as
+        that intersection isn't already occupied by the snake and the intersection is valid
+        (i.e., it isn't negative or larger than the grid size)
+        
+        op is the action taken at the parent; used here to perform parent pruning
+        
+        Mapping of actions:
+        0 - Up
+        1 - Down
+        2 - Right
+        3 - Left
+        """
+        actions = []
+#         if self.has_tip_reached_goal():
+#             return actions
+        #moving up
+        if op != 1 and self._line_tip + 1 < self._dots.shape[0] and self._v_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip+1][self._column_tip] == 0:
+            actions.append(0)
+        #moving down
+        if op != 0 and self._line_tip - 1 >= 0 and self._v_seg[self._line_tip-1][self._column_tip] == 0 and self._dots[self._line_tip-1][self._column_tip] == 0:
+            actions.append(1)
+        #moving right
+        if op != 3 and self._column_tip + 1 < self._dots.shape[1] and self._h_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip][self._column_tip+1] == 0:
+            actions.append(2)
+        #moving left
+        if op != 2 and self._column_tip - 1 >= 0 and self._h_seg[self._line_tip][self._column_tip-1] == 0 and self._dots[self._line_tip][self._column_tip-1] == 0:
+            actions.append(3)
+        return actions
         
     def successors(self):
         """
@@ -536,7 +571,7 @@ class WitnessState(Environment):
         Generates a path through a random walk, mostly used for debugging purposes. The random
         walk finishes as soon as the tip reaches the goal position or there are not more legal actions. 
         """
-        self.clear_path()
+        self.reset()
 
         actions = self.successors()        
         while len(actions) > 0:

@@ -13,6 +13,7 @@ class TreeNode:
         self._levin_cost = levin_cost
         self._action = action
         self._parent = parent
+        self._probabilitiy_distribution_a = None
     
     def __eq__(self, other):
         """
@@ -32,6 +33,15 @@ class TreeNode:
         Hash function used in the closed list
         """
         return self._game_state.__hash__()
+    
+    def set_probability_distribution_actions(self, d):
+        self._probabilitiy_distribution_a = d
+        
+    def get_probability_distribution_actions(self):
+        return self._probabilitiy_distribution_a
+    
+    def set_levin_cost(self, c):
+        self._levin_cost = c
     
     def get_p(self):
         """
@@ -69,25 +79,27 @@ class BFSLevinMult():
     def __init__(self, use_heuristic=True, use_learned_heuristic=False):
         self._use_heuristic = use_heuristic
         self._use_learned_heuristic = use_learned_heuristic
-        
         self._k = 32
     
-    def get_levin_cost(self, parent, child, p_action, predicted_h):
+    def get_levin_cost(self, child_node, predicted_h):
         
-        d = parent.get_g() + 1
-        d_over_pi = d / ((parent.get_p() * p_action) + np.nextafter(0, 1))
+        d = child_node.get_g()
+        d_over_pi = d / child_node.get_p()
         
-        if self._use_learned_heuristic:
+        if self._use_learned_heuristic and self._use_heuristic:
+            max_h = max(predicted_h, child_node.get_game_state().heuristic_value())
+            estimated_future_expansions = max_h / ((child_node.get_p()) ** ((max_h + d) / d))
+        elif self._use_learned_heuristic:
             if predicted_h < 0:
                 predicted_h = 0
-            estimated_future_expansions = predicted_h / (((parent.get_p() * p_action) ** ((predicted_h + d) / d)) + np.nextafter(0, 1)) 
-#             return (predicted_h + parent.get_g() + 1)/((parent.get_p() * p_action) + np.nextafter(0, 1))
+            estimated_future_expansions = predicted_h / ((child_node.get_p()) ** ((predicted_h + d) / d))
         else:
-            estimated_future_expansions = child.heuristic_value() / ((parent.get_p() * p_action) ** ((child.heuristic_value() + d) / d) + np.nextafter(0, 1))
+            h_value = child_node.get_game_state().heuristic_value()
+            estimated_future_expansions =  h_value / ((child_node.get_p()) ** ((h_value + d) / d))
             
         return d_over_pi + estimated_future_expansions
 
-    
+
     def search(self, data):
         """
         Performs Best-First LTS . 
@@ -103,56 +115,64 @@ class BFSLevinMult():
         expanded = 0
         generated = 0
         
-        heapq.heappush(_open, TreeNode(None, state, 1, 0, 0, None))
+        if self._use_learned_heuristic:
+            _, action_distribution, _ = nn_model.predict(np.array([state.get_image_representation()]))
+        else:
+            _, action_distribution = nn_model.predict(np.array([state.get_image_representation()]))
+        
+        node = TreeNode(None, state, 1, 0, 0, -1)
+        node.set_probability_distribution_actions(action_distribution[0])
+        
+        heapq.heappush(_open, node)
         _closed.add(state)
         
         predicted_h = np.zeros(self._k)
         
+        children_to_be_evaluated = []
+        x_input_of_children_to_be_evaluated= []
+        
         while len(_open) > 0:
             
-            nodes_to_be_expanded = []
-            x_input_of_states_to_be_expanded = []
-            
-            while len(nodes_to_be_expanded) < self._k and len(_open) > 0:
-                node = heapq.heappop(_open)
-                nodes_to_be_expanded.append(node)
-                x_input_of_states_to_be_expanded.append(node.get_game_state().get_image_representation())
-            
-            expanded += 1
-                    
-            if self._use_learned_heuristic:
-                _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
-            else:
-                _, action_distribution = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
-                            
-            for i in range(len(nodes_to_be_expanded)):
-                expanded += 1
-            
-                actions = nodes_to_be_expanded[i].get_game_state().successors()                
+            node = heapq.heappop(_open)                            
                 
-                for a in actions:
-                    child = copy.deepcopy(nodes_to_be_expanded[i].get_game_state())
-                    child.apply_action(a)
+            expanded += 1
+            actions = node.get_game_state().successors_parent_pruning(node.get_action())
+            probability_distribution = node.get_probability_distribution_actions()
+                            
+            for a in actions:
+                child = copy.deepcopy(node.get_game_state())
+                child.apply_action(a)
+
+                if child.is_solution(): 
+                    return node.get_g() + 1, expanded, generated
+                
+                child_node = TreeNode(node, child, node.get_p() * probability_distribution[a], node.get_g() + 1, -1, a)
+
+                children_to_be_evaluated.append(child_node)
+                x_input_of_children_to_be_evaluated.append(child.get_image_representation())
+                
+                if len(children_to_be_evaluated) == self._k or len(_open) == 0:
+
+                    if self._use_learned_heuristic:
+                        _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                    else:
+                        _, action_distribution = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
                     
-                    generated += 1
-                    
-                    levin_cost = self.get_levin_cost(nodes_to_be_expanded[i], 
-                                                    child, 
-                                                    action_distribution[i][a], 
-                                                    predicted_h[i])
-                    child_node = TreeNode(nodes_to_be_expanded[i],
-                                          child, 
-                                          nodes_to_be_expanded[i].get_p() * action_distribution[i][a], 
-                                          nodes_to_be_expanded[i].get_g() + 1,
-                                          levin_cost,
-                                          a)
-                    
-                    if child.is_solution(): 
-                        return nodes_to_be_expanded[i].get_g() + 1, expanded, generated
-                    
-                    if child not in _closed:
-                        heapq.heappush(_open, child_node)
-                        _closed.add(child)  
+                    for i in range(len(children_to_be_evaluated)):
+                        generated += 1
+                        
+                        levin_cost = self.get_levin_cost(children_to_be_evaluated[i], 
+                                                        predicted_h[i])
+                        children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution[i])
+                        children_to_be_evaluated[i].set_levin_cost(levin_cost)
+        
+                        
+                        if children_to_be_evaluated[i].get_game_state() not in _closed:
+                            heapq.heappush(_open, children_to_be_evaluated[i])
+                            _closed.add(children_to_be_evaluated[i].get_game_state())
+                        
+                    children_to_be_evaluated.clear()
+                    x_input_of_children_to_be_evaluated.clear()    
         
     def _store_trajectory_memory(self, tree_node, expanded):
         """
@@ -183,7 +203,8 @@ class BFSLevinMult():
         solution_costs.append(cost)
         
         return Trajectory(states, actions, solution_costs, expanded)        
-     
+    
+    
     def search_for_learning(self, data):
         """
         Performs Best-First LTS bounded by a search budget.
@@ -191,9 +212,6 @@ class BFSLevinMult():
         Returns Boolean indicating whether the solution was found,
         number of nodes expanded, and number of nodes generated
         """
-        expanded = 0
-        generated = 0
-        
         state = data[0]
         puzzle_name = data[1]
         budget = data[2]
@@ -202,55 +220,69 @@ class BFSLevinMult():
         _open = []
         _closed = set()
         
-        heapq.heappush(_open, TreeNode(None, state, 1, 0, 0, None))
+        expanded = 0
+        generated = 0
+        
+        if self._use_learned_heuristic:
+            _, action_distribution, _ = nn_model.predict(np.array([state.get_image_representation()]))
+        else:
+            _, action_distribution = nn_model.predict(np.array([state.get_image_representation()]))
+        
+        node = TreeNode(None, state, 1, 0, 0, -1)
+        node.set_probability_distribution_actions(action_distribution[0])
+        
+        heapq.heappush(_open, node)
         _closed.add(state)
         
         predicted_h = np.zeros(self._k)
         
+        children_to_be_evaluated = []
+        x_input_of_children_to_be_evaluated= []
+        
         while len(_open) > 0:
             
-            nodes_to_be_expanded = []
-            x_input_of_states_to_be_expanded = []
-            
-            while len(nodes_to_be_expanded) < self._k and len(_open) > 0:
-                node = heapq.heappop(_open)
-                nodes_to_be_expanded.append(node)
-                x_input_of_states_to_be_expanded.append(node.get_game_state().get_image_representation())
+            node = heapq.heappop(_open)                            
+                
+            expanded += 1
+            actions = node.get_game_state().successors_parent_pruning(node.get_action())
+            probability_distribution = node.get_probability_distribution_actions()
             
             if expanded >= budget:
                 return False, None, expanded, generated, puzzle_name
-                
-            if self._use_learned_heuristic:
-                _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
-            else:
-                _, action_distribution = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
                             
-            for i in range(len(nodes_to_be_expanded)):
-                expanded += 1
+            for a in actions:
+                child = copy.deepcopy(node.get_game_state())
+                child.apply_action(a)
+
+                child_node = TreeNode(node, child, node.get_p() * probability_distribution[a], node.get_g() + 1, -1, a)
+
+                if child.is_solution(): 
+                    trajectory = self._store_trajectory_memory(child_node, expanded)
+                    return True, trajectory, expanded, generated, puzzle_name
                 
-                actions = nodes_to_be_expanded[i].get_game_state().successors()                
+
+                children_to_be_evaluated.append(child_node)
+                x_input_of_children_to_be_evaluated.append(child.get_image_representation())
                 
-                for a in actions:
-                    child = copy.deepcopy(nodes_to_be_expanded[i].get_game_state())
-                    child.apply_action(a)
+                if len(children_to_be_evaluated) == self._k or len(_open) == 0:
+
+                    if self._use_learned_heuristic:
+                        _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                    else:
+                        _, action_distribution = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
                     
-                    generated += 1
-                    
-                    levin_cost = self.get_levin_cost(nodes_to_be_expanded[i], 
-                                                    child, 
-                                                    action_distribution[i][a], 
-                                                    predicted_h[i])                
-                    child_node = TreeNode(nodes_to_be_expanded[i],
-                                          child, 
-                                          nodes_to_be_expanded[i].get_p() * action_distribution[i][a], 
-                                          nodes_to_be_expanded[i].get_g() + 1,
-                                          levin_cost,
-                                          a)
-                    
-                    if child.is_solution(): 
-                        trajectory = self._store_trajectory_memory(child_node, expanded)
-                        return True, trajectory, expanded, generated, puzzle_name
-                    
-                    if child not in _closed:
-                        heapq.heappush(_open, child_node)
-                        _closed.add(child)  
+                    for i in range(len(children_to_be_evaluated)):
+                        generated += 1
+                        
+                        levin_cost = self.get_levin_cost(children_to_be_evaluated[i],  
+                                                        predicted_h[i])
+                        children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution[i])
+                        children_to_be_evaluated[i].set_levin_cost(levin_cost)
+        
+                        
+                        if children_to_be_evaluated[i].get_game_state() not in _closed:
+                            heapq.heappush(_open, children_to_be_evaluated[i])
+                            _closed.add(children_to_be_evaluated[i].get_game_state())
+                        
+                    children_to_be_evaluated.clear()
+                    x_input_of_children_to_be_evaluated.clear()      

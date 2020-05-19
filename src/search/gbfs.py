@@ -95,7 +95,7 @@ class GBFS():
         
         predicted_h = np.zeros(self._k)
         
-        heapq.heappush(_open, GBFSTreeNode(None, state, 0, 0, None))
+        heapq.heappush(_open, GBFSTreeNode(None, state, 0, 0, -1))
         _closed.add(state)
         
         children_to_be_evaluated = []
@@ -106,7 +106,7 @@ class GBFS():
             
             expanded += 1
             
-            actions = node.get_game_state().successors()             
+            actions = node.get_game_state().successors_parent_pruning(node.get_action())             
                 
             for a in actions:
                 child = copy.deepcopy(node.get_game_state())
@@ -187,7 +187,7 @@ class GBFS():
         expanded = 0
         generated = 0
         
-        heapq.heappush(_open, GBFSTreeNode(None, state, 0, 0, None))
+        heapq.heappush(_open, GBFSTreeNode(None, state, 0, 0, -1))
         _closed.add(state)
         
         predicted_h = np.zeros(self._k)
@@ -203,7 +203,7 @@ class GBFS():
             if expanded >= budget:
                 return False, None, expanded, generated, puzzle_name
             
-            actions = node.get_game_state().successors()             
+            actions = node.get_game_state().successors_parent_pruning(node.get_action())             
                 
             for a in actions:
                 child = copy.deepcopy(node.get_game_state())

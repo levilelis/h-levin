@@ -11,6 +11,7 @@ import argparse
 from search.a_star import AStar
 from search.gbfs import GBFS
 from search.bfs_levin_mult import BFSLevinMult
+from domains.sliding_tile_puzzle import SlidingTilePuzzle
     
    
 def search(states, planner, nn_model, ncpus):
@@ -22,7 +23,7 @@ def search(states, planner, nn_model, ncpus):
     total_cost = 0
     
     for _, state in states.items():
-        state.clear_path()
+        state.reset()
     
     start_total = time.time()
     
@@ -47,7 +48,9 @@ def search(states, planner, nn_model, ncpus):
                                                                                 end_total - start_total))
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
-        
+    
+#     search(states, planner, nn_model, ncpus)
+    
     log_folder = 'logs/'
     models_folder = 'trained_models/' + output
     if not os.path.exists(models_folder):
@@ -125,7 +128,7 @@ def main():
     It is possible to use this system to either train a new neural network model through the bootstrap system and
     Levin tree search (LTS) algorithm, or to use a trained neural network with LTS.         
     """
-    
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
     parser = argparse.ArgumentParser()
     
     parser.add_argument('-l', action='store', dest='loss_function', 
@@ -140,6 +143,9 @@ def main():
     
     parser.add_argument('-a', action='store', dest='search_algorithm',
                         help='Name of the search algorithm (Levin or AStar)')
+    
+    parser.add_argument('-d', action='store', dest='problem_domain',
+                        help='Problem domain (Witness or SlidingTile)')
     
     parser.add_argument('--default-heuristic', action='store_true', default=False,
                         dest='use_heuristic',
@@ -159,19 +165,33 @@ def main():
     
     parameters = parser.parse_args()
     
-    
     states = {}
-    puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
     
-    for file in puzzle_files:
-        if '.' in file:
-            continue
-        s = WitnessState()
-        s.read_state(join(parameters.problems_folder, file))
-        states[file] = s
+    if parameters.problem_domain == 'SlidingTile':
+        puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
+    
+        for filename in puzzle_files:
+            with open(join(parameters.problems_folder, filename), 'r') as file:
+                problems = file.readlines()
+                
+                for i in range(len(problems)):
+                    puzzle = SlidingTilePuzzle(problems[i])
+                    states['puzzle_' + str(i)] = puzzle
+    
+    elif parameters.problem_domain == 'Witness':
+        puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
+        
+        for file in puzzle_files:
+            if '.' in file:
+                continue
+            s = WitnessState()
+            s.read_state(join(parameters.problems_folder, file))
+            states[file] = s
+        
+#     input_size = s.get_image_representation().shape
             
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 6))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 1))
     
     print('Number of cpus available: ', ncpus)
     
@@ -206,7 +226,6 @@ def main():
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
             
             if parameters.learning_mode:
-                print(type(nn_model))
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus)
