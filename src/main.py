@@ -147,6 +147,9 @@ def main():
     parser.add_argument('-d', action='store', dest='problem_domain',
                         help='Problem domain (Witness or SlidingTile)')
     
+    parser.add_argument('-b', action='store', dest='search_budget',
+                        help='The initial budget (nodes expanded) allowed to the bootstrap procedure')
+    
     parser.add_argument('--default-heuristic', action='store_true', default=False,
                         dest='use_heuristic',
                         help='Use the default heuristic as input')
@@ -209,7 +212,7 @@ def main():
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
             
             if parameters.learning_mode:
-                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)            
+                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus)
             else:
@@ -226,7 +229,7 @@ def main():
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
             
             if parameters.learning_mode:
-                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)            
+                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus)
             else:
@@ -238,7 +241,7 @@ def main():
             
             if parameters.learning_mode and parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
-                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)
+                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
@@ -251,7 +254,7 @@ def main():
             
             if parameters.learning_mode:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
-                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, 10000, ncpus)
+                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
