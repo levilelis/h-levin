@@ -197,7 +197,7 @@ class BFSLevin():
         actions.append(action)
         solution_costs.append(cost)
         
-        return Trajectory(states, actions, solution_costs, expanded)        
+        return Trajectory(states, actions, solution_costs, expanded, math.exp(tree_node.get_p()))        
      
     def search_for_learning(self, data):
         """

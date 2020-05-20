@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from models.loss_functions import LevinLoss, CrossEntropyLoss,\
-    CrossEntropyMSELoss, LevinMSELoss, MSELoss
+    CrossEntropyMSELoss, LevinMSELoss, MSELoss, ImprovedLevinLoss
 
 class InvalidLossFunction(Exception):
     pass
@@ -133,6 +133,8 @@ class TwoHeadedConvNet(tf.keras.Model):
         
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)
         
+        self._loss_name = loss_name
+        
         if loss_name == 'LevinLoss':
             self._loss_function = LevinMSELoss()
         elif loss_name == 'CrossEntropyLoss':
@@ -185,6 +187,8 @@ class ConvNet(tf.keras.Model):
         
         super(ConvNet, self).__init__(name='')
         
+        self._max_grad_norms = []
+        
         self._reg_const = reg_const
         self._kernel_size = kernel_size
         self._filters = filters
@@ -197,14 +201,14 @@ class ConvNet(tf.keras.Model):
                                             activation='relu',
                                             kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
                                             dtype='float64')
-        self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool1', dtype='float64')
+        # self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool1', dtype='float64')
         self.conv2 = tf.keras.layers.Conv2D(filters, 
                                             kernel_size, 
                                             name='conv2', 
                                             activation='relu',
                                             kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
                                             dtype='float64')
-        self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool2', dtype='float64')
+        #self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool2', dtype='float64')
         self.flatten = tf.keras.layers.Flatten(name='flatten1', dtype='float64')
         self.dense1 = tf.keras.layers.Dense(128, 
                                             name='dense1', 
@@ -220,6 +224,8 @@ class ConvNet(tf.keras.Model):
         
         if loss_name == 'LevinLoss':
             self._loss_function = LevinLoss()
+        elif loss_name == 'ImprovedLevinLoss':
+            self._loss_function = ImprovedLevinLoss()
         elif loss_name == 'CrossEntropyLoss':
             self._loss_function = CrossEntropyLoss()
         else:
@@ -257,6 +263,21 @@ class ConvNet(tf.keras.Model):
                 loss = self._loss_function.compute_loss(trajectory, self)
 
             grads = tape.gradient(loss, self.trainable_weights)
+            
+            if self._loss_name == 'ImprovedLevinLoss':
+                if len(self._max_grad_norms) == 0:
+                    for grad in grads:
+                        self._max_grad_norms.append(tf.norm(grad, ord=1))
+                else:
+                    for i in range(len(grads)):
+                        norm = tf.norm(grads[i], ord=1)
+                         
+                        if norm > self._max_grad_norms[i]:
+                            self._max_grad_norms[i] = norm
+                         
+                        if self._max_grad_norms[i] > 0:
+                            grads[i] /= self._max_grad_norms[i]
+            
             self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
             losses.append(loss)
         

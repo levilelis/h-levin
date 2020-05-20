@@ -3,7 +3,6 @@ import numpy as np
 
 from models.memory import Trajectory
 import copy
-import math
 
 class TreeNode:
     def __init__(self, parent, game_state, p, g, levin_cost, action):
@@ -202,7 +201,7 @@ class BFSLevinMult():
         actions.append(action)
         solution_costs.append(cost)
         
-        return Trajectory(states, actions, solution_costs, expanded)        
+        return Trajectory(states, actions, solution_costs, expanded, tree_node.get_p())        
     
     
     def search_for_learning(self, data):
