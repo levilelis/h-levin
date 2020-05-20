@@ -49,7 +49,7 @@ def search(states, planner, nn_model, ncpus):
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
     
-#     search(states, planner, nn_model, ncpus)
+    search(states, planner, nn_model, ncpus)
     
     log_folder = 'logs/'
     models_folder = 'trained_models/' + output
@@ -108,17 +108,17 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
             for _ in range(100):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
-            if number_solved < 20:
-                budget *= 2
+#             if number_solved < 20:
+#                 budget *= 2
             memory.clear()
+            
+            nn_model.save_weights(join(models_folder, 'model_weights')) 
         else:
             budget *= 2
             print('Budget: ', budget)
             continue
                                 
         iteration += 1
-    
-    nn_model.save_weights(join(models_folder, 'model_weights')) 
     
     search(states, planner, nn_model, ncpus)
 
@@ -196,6 +196,8 @@ def main():
     KerasManager.register('KerasModel', KerasModel)
     ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 1))
     
+    k_expansions = 32
+    
     print('Number of cpus available: ', ncpus)
     
     with KerasManager() as manager:
@@ -204,7 +206,7 @@ def main():
         
         if parameters.search_algorithm == 'Levin':
         
-            bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic)
+            bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
         
             if parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     
@@ -221,7 +223,7 @@ def main():
                 
         if parameters.search_algorithm == 'LevinMult':
         
-            bfs_planner = BFSLevinMult(parameters.use_heuristic, parameters.use_learned_heuristic)
+            bfs_planner = BFSLevinMult(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
         
             if parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     
@@ -237,7 +239,7 @@ def main():
                 search(states, bfs_planner, nn_model, ncpus)
         
         if parameters.search_algorithm == 'AStar':
-            bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic)
+            bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
             
             if parameters.learning_mode and parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
@@ -250,7 +252,7 @@ def main():
                 search(states, bfs_planner, nn_model, ncpus)  
                 
         if parameters.search_algorithm == 'GBFS':
-            bfs_planner = GBFS(parameters.use_heuristic, parameters.use_learned_heuristic)
+            bfs_planner = GBFS(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
             
             if parameters.learning_mode:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)

@@ -75,10 +75,11 @@ class TreeNode:
 
 class BFSLevinMult():
     
-    def __init__(self, use_heuristic=True, use_learned_heuristic=False):
+    def __init__(self, use_heuristic=True, use_learned_heuristic=False, k_expansions=32):
         self._use_heuristic = use_heuristic
         self._use_learned_heuristic = use_learned_heuristic
-        self._k = 32
+        self._smallest_float = np.nextafter(0, 1)
+        self._k = k_expansions
     
     def get_levin_cost(self, child_node, predicted_h):
         
@@ -91,10 +92,10 @@ class BFSLevinMult():
         elif self._use_learned_heuristic:
             if predicted_h < 0:
                 predicted_h = 0
-            estimated_future_expansions = predicted_h / ((child_node.get_p()) ** ((predicted_h + d) / d))
+            estimated_future_expansions = predicted_h / ((child_node.get_p()) ** ((predicted_h + d) / d) + self._smallest_float)
         else:
             h_value = child_node.get_game_state().heuristic_value()
-            estimated_future_expansions =  h_value / ((child_node.get_p()) ** ((h_value + d) / d))
+            estimated_future_expansions =  h_value / ((child_node.get_p()) ** ((h_value + d) / d) + self._smallest_float)
             
         return d_over_pi + estimated_future_expansions
 
@@ -144,6 +145,9 @@ class BFSLevinMult():
 
                 if child.is_solution(): 
                     return node.get_g() + 1, expanded, generated
+                
+                if child in _closed:
+                    continue
                 
                 child_node = TreeNode(node, child, node.get_p() * probability_distribution[a], node.get_g() + 1, -1, a)
 
@@ -241,7 +245,7 @@ class BFSLevinMult():
         while len(_open) > 0:
             
             node = heapq.heappop(_open)                            
-                
+            
             expanded += 1
             actions = node.get_game_state().successors_parent_pruning(node.get_action())
             probability_distribution = node.get_probability_distribution_actions()

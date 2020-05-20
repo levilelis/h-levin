@@ -76,11 +76,11 @@ class TreeNode:
 
 class BFSLevin():
     
-    def __init__(self, use_heuristic=True, use_learned_heuristic=False):
+    def __init__(self, use_heuristic=True, use_learned_heuristic=False, k_expansions=32):
         self._use_heuristic = use_heuristic
         self._use_learned_heuristic = use_learned_heuristic
         
-        self._k = 32
+        self._k = k_expansions
     
     def get_levin_cost(self, child_node, predicted_h):
         if self._use_learned_heuristic and self._use_heuristic:
@@ -140,6 +140,9 @@ class BFSLevin():
 
                 if child.is_solution(): 
                     return node.get_g() + 1, expanded, generated
+                
+                if child in _closed:
+                    continue
                 
                 child_node = TreeNode(node, child, node.get_p() + probability_distribution[a], node.get_g() + 1, -1, a)
 
@@ -279,76 +282,4 @@ class BFSLevin():
                             _closed.add(children_to_be_evaluated[i].get_game_state())
                         
                     children_to_be_evaluated.clear()
-                    x_input_of_children_to_be_evaluated.clear()     
-     
-     
-    def search_for_learning_v2(self, data):
-        """
-        Performs Best-First LTS bounded by a search budget.
-        
-        Returns Boolean indicating whether the solution was found,
-        number of nodes expanded, and number of nodes generated
-        """
-        expanded = 0
-        generated = 0
-        
-        state = data[0]
-        puzzle_name = data[1]
-        budget = data[2]
-        nn_model = data[3]
-        
-        _open = []
-        _closed = set()
-        
-        heapq.heappush(_open, TreeNode(None, state, 1, 0, 0, -1))
-        _closed.add(state)
-        
-        predicted_h = np.zeros(self._k)
-        
-        while len(_open) > 0:
-            
-            nodes_to_be_expanded = []
-            x_input_of_states_to_be_expanded = []
-            
-            while len(nodes_to_be_expanded) < self._k and len(_open) > 0:
-                node = heapq.heappop(_open)
-                nodes_to_be_expanded.append(node)
-                x_input_of_states_to_be_expanded.append(node.get_game_state().get_image_representation())
-            
-            if expanded >= budget:
-                return False, None, expanded, generated, puzzle_name
-                
-            if self._use_learned_heuristic:
-                action_distribution_log, _, predicted_h = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
-            else:
-                action_distribution_log, _ = nn_model.predict(np.array(x_input_of_states_to_be_expanded))
-            
-            for i in range(len(nodes_to_be_expanded)):
-                expanded += 1
-                
-                actions = nodes_to_be_expanded[i].get_game_state().successors_parent_pruning(nodes_to_be_expanded[i].get_action())                
-                
-                for a in actions:
-                    child = copy.deepcopy(nodes_to_be_expanded[i].get_game_state())
-                    child.apply_action(a)
-                    
-                    generated += 1
-                    
-                    levin_cost = self.get_levin_cost(nodes_to_be_expanded[i], 
-                                                    child, 
-                                                    action_distribution_log[i][a], 
-                                                    predicted_h[i])                
-                    child_node = TreeNode(nodes_to_be_expanded[i],
-                                          child, 
-                                          nodes_to_be_expanded[i].get_p() + action_distribution_log[i][a], 
-                                          nodes_to_be_expanded[i].get_g() + 1,
-                                          levin_cost,
-                                          a)
-                    
-                    if child.is_solution(): 
-                        trajectory = self._store_trajectory_memory(child_node, expanded)
-                        return True, trajectory, expanded, generated, puzzle_name
-                    
-                    if child not in _closed:
-                        heapq.heappush(_open, child_node)
-                        _closed.add(child)  
+                    x_input_of_children_to_be_evaluated.clear()      

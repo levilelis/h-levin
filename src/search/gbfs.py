@@ -64,11 +64,11 @@ class GBFSTreeNode:
 
 class GBFS():
     
-    def __init__(self, use_heuristic=True, use_learned_heuristic=False):
+    def __init__(self, use_heuristic=True, use_learned_heuristic=False, k_expansions=32):
         self._use_learned_heuristic = use_learned_heuristic
         self._use_heuristic = use_heuristic
         
-        self._k = 32
+        self._k = k_expansions
     
     def get_h_cost(self, child, predicted_h):
         if self._use_heuristic and self._use_learned_heuristic:
@@ -116,6 +116,9 @@ class GBFS():
                 
                 if child.is_solution(): 
                     return node.get_g() + 1, expanded, generated
+                
+                if child in _closed:
+                    continue
 
                 child_node = GBFSTreeNode(node, child, node.get_g() + 1, -1, a)
                 
