@@ -76,11 +76,23 @@ class TreeNode:
 
 class BFSLevin():
     
-    def __init__(self, use_heuristic=True, use_learned_heuristic=False, k_expansions=32):
+    def __init__(self, use_heuristic=True, use_learned_heuristic=False, estimated_probability_to_go=True, k_expansions=32):
         self._use_heuristic = use_heuristic
         self._use_learned_heuristic = use_learned_heuristic
-        
+        self._estimated_probability_to_go = estimated_probability_to_go
         self._k = k_expansions
+            
+    def get_levin_cost_star(self, child_node, predicted_h):
+        if self._use_learned_heuristic and self._use_heuristic:
+            max_h = max(predicted_h, child_node.get_game_state().heuristic_value())
+            return math.log(max_h + child_node.get_g()) - (child_node.get_p() * (1 + (max_h/child_node.get_g())))
+        elif self._use_learned_heuristic:
+            if predicted_h < 0:
+                predicted_h = 0
+            return math.log(predicted_h + child_node.get_g()) - (child_node.get_p() * (1 + (predicted_h/child_node.get_g())))
+        else:
+            h_value = child_node.get_game_state().heuristic_value()
+            return math.log(h_value + child_node.get_g()) - (child_node.get_p() * (1 + (h_value/child_node.get_g())))
     
     def get_levin_cost(self, child_node, predicted_h):
         if self._use_learned_heuristic and self._use_heuristic:
@@ -159,11 +171,12 @@ class BFSLevin():
                     for i in range(len(children_to_be_evaluated)):
                         generated += 1
                         
-                        levin_cost = self.get_levin_cost(children_to_be_evaluated[i], 
-                                                        predicted_h[i])
+                        if self._estimated_probability_to_go:    
+                            levin_cost = self.get_levin_cost_star(children_to_be_evaluated[i], predicted_h[i])
+                        else:
+                            levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
                         children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution_log[i])
                         children_to_be_evaluated[i].set_levin_cost(levin_cost)
-        
                         
                         if children_to_be_evaluated[i].get_game_state() not in _closed:
                             heapq.heappush(_open, children_to_be_evaluated[i])
@@ -271,8 +284,10 @@ class BFSLevin():
                     for i in range(len(children_to_be_evaluated)):
                         generated += 1
                         
-                        levin_cost = self.get_levin_cost(children_to_be_evaluated[i],  
-                                                        predicted_h[i])
+                        if self._estimated_probability_to_go:    
+                            levin_cost = self.get_levin_cost_star(children_to_be_evaluated[i], predicted_h[i])
+                        else:
+                            levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
                         children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution_log[i])
                         children_to_be_evaluated[i].set_levin_cost(levin_cost)
         

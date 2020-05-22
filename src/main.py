@@ -48,8 +48,8 @@ def search(states, planner, nn_model, ncpus):
                                                                                 end_total - start_total))
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
-    
-    search(states, planner, nn_model, ncpus)
+#     
+#     search(states, planner, nn_model, ncpus)
     
     log_folder = 'logs/'
     models_folder = 'trained_models/' + output
@@ -194,7 +194,7 @@ def main():
 #     input_size = s.get_image_representation().shape
             
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 1))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 2))
     
     k_expansions = 32
     
@@ -204,9 +204,12 @@ def main():
                 
         nn_model = manager.KerasModel()
         
-        if parameters.search_algorithm == 'Levin':
+        if parameters.search_algorithm == 'Levin' or parameters.search_algorithm == 'LevinStar':
         
-            bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
+            if parameters.search_algorithm == 'Levin':
+                bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, False, k_expansions)
+            else:
+                bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, True, k_expansions)
         
             if parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     
