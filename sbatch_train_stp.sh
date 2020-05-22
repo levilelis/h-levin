@@ -17,8 +17,10 @@ for iter in {1..1}; do
 			name_scheme=${scheme// /}
 			name_scheme=${name_scheme//-heuristic/}
 			name_scheme=${name_scheme//--/-}
-			var="--output=${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter} --export=params=\"${scheme} -a ${algorithm} -l ${loss} -p ${instances} -m ${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter} ${training_params}\" run_bootstrap_train.sh"
-			sbatch ${var}
+			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}"
+			params_exp="\"${scheme} -a ${algorithm} -l ${loss} -p ${instances} -m ${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter} ${training_params}\""
+
+			sbatch --output=${output_exp} --export=params=${params_exp} run_bootstrap_train.sh
 		done
 	done
 done
@@ -34,8 +36,10 @@ for iter in {1..1}; do
 			name_scheme=${scheme// /}
 			name_scheme=${name_scheme//-heuristic/}
 			name_scheme=${name_scheme//--/-}
-			var="--output=${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter} --export=params=\"${scheme} -a ${algorithm} -l ${loss} -p ${instances} -m ${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter} ${training_params}\" run_bootstrap_train.sh"
-			sbatch ${var}
+			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}" 
+			params_exp="\"${scheme} -a ${algorithm} -l ${loss} -p ${instances} -m ${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter} ${training_params}\""
+			
+			sbatch --output=${output_exp} --export=params=${params_exp} run_bootstrap_train.sh
 		done
 	done
 done
@@ -50,8 +54,10 @@ for iter in {1..1}; do
 		name_scheme=${scheme// /}
 		name_scheme=${name_scheme//-heuristic/}
 		name_scheme=${name_scheme//--/-}
-		var="--output=${output}${lower_algorithm}${name_scheme}-v${iter} --export=params=\"${scheme} -a ${algorithm} -p ${instances} -m ${domain_name}${lower_algorithm}${name_scheme}-v${iter} ${training_params}\" run_bootstrap_train.sh"
-		sbatch ${var}
+		output_exp="${output}${lower_algorithm}${name_scheme}-v${iter}"
+		params_exp="\"${scheme} -a ${algorithm} -p ${instances} -m ${domain_name}${lower_algorithm}${name_scheme}-v${iter} ${training_params}\""
+		
+		sbatch --output=${output_exp} --export=params=${params_exp} run_bootstrap_train.sh
 	done
 done
 
@@ -65,7 +71,9 @@ for iter in {1..1}; do
 		name_scheme=${scheme// /}
 		name_scheme=${name_scheme//-heuristic/}
 		name_scheme=${name_scheme//--/-}
-		var="--output=${output}${lower_algorithm}${name_scheme}-v${iter} --export=params=\"${scheme} -a ${algorithm} -p ${instances} -m ${domain_name}${lower_algorithm}${name_scheme}-v${iter} ${training_params}\" run_bootstrap_train.sh"
-		sbatch ${var}
+		output_exp="${output}${lower_algorithm}${name_scheme}-v${iter}"
+		params_exp="\"${scheme} -a ${algorithm} -p ${instances} -m ${domain_name}${lower_algorithm}${name_scheme}-v${iter} ${training_params}\""
+		
+		sbatch --output=${output_exp} --export=params=${params_exp} run_bootstrap_train.sh
 	done
 done
