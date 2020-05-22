@@ -22,27 +22,23 @@ class HeuristicConvNet(tf.keras.Model):
         self.conv1 = tf.keras.layers.Conv2D(filters, 
                                             kernel_size, 
                                             name='conv1', 
-                                            activation='relu',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            activation='relu', 
                                             dtype='float64')
         self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool1', dtype='float64')
         self.conv2 = tf.keras.layers.Conv2D(filters, 
                                             kernel_size, 
                                             name='conv2', 
-                                            activation='relu',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            activation='relu', 
                                             dtype='float64')
         self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool2', dtype='float64')
         self.flatten = tf.keras.layers.Flatten(name='flatten1', dtype='float64')
         
         self.dense1 = tf.keras.layers.Dense(128, 
                                             name='dense1', 
-                                            activation='relu',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            activation='relu', 
                                             dtype='float64')
         self.dense2 = tf.keras.layers.Dense(1, 
-                                            name='dense2',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            name='dense2', 
                                             dtype='float64')
         
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)
@@ -97,15 +93,13 @@ class TwoHeadedConvNet(tf.keras.Model):
         self.conv1 = tf.keras.layers.Conv2D(filters, 
                                             kernel_size, 
                                             name='conv1', 
-                                            activation='relu',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            activation='relu', 
                                             dtype='float64')
         self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool1', dtype='float64')
         self.conv2 = tf.keras.layers.Conv2D(filters, 
                                             kernel_size, 
                                             name='conv2', 
-                                            activation='relu',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            activation='relu', 
                                             dtype='float64')
         self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool2', dtype='float64')
         self.flatten = tf.keras.layers.Flatten(name='flatten1', dtype='float64')
@@ -113,23 +107,19 @@ class TwoHeadedConvNet(tf.keras.Model):
         #Probability distribution
         self.dense11 = tf.keras.layers.Dense(128, 
                                              name='dense11', 
-                                             activation='relu',
-                                             kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                             activation='relu', 
                                              dtype='float64')
         self.dense12 = tf.keras.layers.Dense(number_actions, 
-                                             name='dense12',
-                                             kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                             name='dense12', 
                                              dtype='float64')
         
         #Heuristic value
         self.dense21 = tf.keras.layers.Dense(128, 
                                              name='dense21', 
-                                             activation='relu',
-                                             kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                             activation='relu', 
                                              dtype='float64')
         self.dense22 = tf.keras.layers.Dense(1, 
-                                             name='dense22',
-                                             kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                             name='dense22', 
                                              dtype='float64')
         
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)
@@ -201,26 +191,22 @@ class ConvNet(tf.keras.Model):
         self.conv1 = tf.keras.layers.Conv2D(filters, 
                                             kernel_size, 
                                             name='conv1', 
-                                            activation='relu',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            activation='relu', 
                                             dtype='float64')
         # self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool1', dtype='float64')
         self.conv2 = tf.keras.layers.Conv2D(filters, 
                                             kernel_size, 
                                             name='conv2', 
-                                            activation='relu',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            activation='relu', 
                                             dtype='float64')
         #self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool2', dtype='float64')
         self.flatten = tf.keras.layers.Flatten(name='flatten1', dtype='float64')
         self.dense1 = tf.keras.layers.Dense(128, 
                                             name='dense1', 
-                                            activation='relu',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            activation='relu', 
                                             dtype='float64')
         self.dense2 = tf.keras.layers.Dense(number_actions, 
-                                            name='dense2',
-                                            kernel_regularizer = tf.keras.regularizers.l2(self._reg_const), 
+                                            name='dense2', 
                                             dtype='float64')
         
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)

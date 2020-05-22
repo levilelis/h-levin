@@ -20,6 +20,12 @@ class ImprovedLevinMSELoss(LossFunction):
         images = [s.get_image_representation() for s in trajectory.get_states()]           
         actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
         _, _, logits_pi, logits_h  = model(np.array(images))
+        
+        weights = model.get_weights()
+        weights_l2_norm = 0
+        for w in weights:
+            weights_l2_norm += tf.norm(w, ord=2)
+        
         loss = self.cross_entropy_loss(actions_one_hot, logits_pi)
         
         d = len(trajectory.get_actions()) + 1
@@ -35,7 +41,7 @@ class ImprovedLevinMSELoss(LossFunction):
         loss *= tf.stop_gradient(tf.convert_to_tensor(expanded * a, dtype=tf.float64))
         
         solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
-        loss += self.mse(solution_costs_tf, logits_h)
+        loss += self.mse(solution_costs_tf, logits_h) + model._reg_const * weights_l2_norm
 
         return loss
     
@@ -48,6 +54,12 @@ class ImprovedLevinLoss(LossFunction):
         images = [s.get_image_representation() for s in trajectory.get_states()]           
         actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
         _, _, logits = model(np.array(images))
+        
+        weights = model.get_weights()
+        weights_l2_norm = 0
+        for w in weights:
+            weights_l2_norm += tf.norm(w, ord=2)
+        
         loss = self.cross_entropy_loss(actions_one_hot, logits)
         
         d = len(trajectory.get_actions()) + 1
@@ -61,6 +73,8 @@ class ImprovedLevinLoss(LossFunction):
             a = 0        
         
         loss *= tf.stop_gradient(tf.convert_to_tensor(expanded * a, dtype=tf.float64))
+        
+        loss += model._reg_const * weights_l2_norm
 
         return loss
     
@@ -73,10 +87,17 @@ class LevinLoss(LossFunction):
         images = [s.get_image_representation() for s in trajectory.get_states()]           
         actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
         _, _, logits = model(np.array(images))
+        
+        weights = model.get_weights()
+        weights_l2_norm = 0
+        for w in weights:
+            weights_l2_norm += tf.norm(w, ord=2)
+        
         loss = self.cross_entropy_loss(actions_one_hot, logits)
         
 #         loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_expanded(), dtype=tf.float64))
         loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_non_normalized_expanded(), dtype=tf.float64))
+        loss += model._reg_const * weights_l2_norm
 
         return loss
     
@@ -89,7 +110,13 @@ class CrossEntropyLoss(LossFunction):
         images = [s.get_image_representation() for s in trajectory.get_states()]
         actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
         _, _, logits = model(np.array(images))
-        return self.cross_entropy_loss(actions_one_hot, logits)
+        
+        weights = model.get_weights()
+        weights_l2_norm = 0
+        for w in weights:
+            weights_l2_norm += tf.norm(w, ord=2)
+        
+        return self.cross_entropy_loss(actions_one_hot, logits) + model._reg_const * weights_l2_norm
     
 class CrossEntropyMSELoss(LossFunction):
     
@@ -102,10 +129,15 @@ class CrossEntropyMSELoss(LossFunction):
         actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
         _, _, logits_pi, logits_h  = model(np.array(images))
         
+        weights = model.get_weights()
+        weights_l2_norm = 0
+        for w in weights:
+            weights_l2_norm += tf.norm(w, ord=2)
+        
         loss = self.cross_entropy_loss(actions_one_hot, logits_pi) 
         
         solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
-        loss += self.mse(solution_costs_tf, logits_h)
+        loss += self.mse(solution_costs_tf, logits_h) + model._reg_const * weights_l2_norm
         
         return loss
     
@@ -119,13 +151,19 @@ class LevinMSELoss(LossFunction):
         images = [s.get_image_representation() for s in trajectory.get_states()]           
         actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
         _, _, logits_pi, logits_h  = model(np.array(images))
+        
+        weights = model.get_weights()
+        weights_l2_norm = 0
+        for w in weights:
+            weights_l2_norm += tf.norm(w, ord=2)
+        
         loss = self.cross_entropy_loss(actions_one_hot, logits_pi)
         
 #         loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_expanded(), dtype=tf.float64))
         loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_non_normalized_expanded(), dtype=tf.float64))
         
         solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
-        loss += self.mse(solution_costs_tf, logits_h)
+        loss += self.mse(solution_costs_tf, logits_h) + model._reg_const * weights_l2_norm
 
         return loss
     
@@ -138,7 +176,12 @@ class MSELoss(LossFunction):
         images = [s.get_image_representation() for s in trajectory.get_states()]           
         logits_h  = model(np.array(images))
         
+        weights = model.get_weights()
+        weights_l2_norm = 0
+        for w in weights:
+            weights_l2_norm += tf.norm(w, ord=2)
+        
         solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
-        loss = self.mse(solution_costs_tf, logits_h)
+        loss = self.mse(solution_costs_tf, logits_h) + model._reg_const * weights_l2_norm
 
         return loss
