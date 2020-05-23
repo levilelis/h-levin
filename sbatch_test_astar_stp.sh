@@ -1,6 +1,5 @@
 #!/bin/bash
 
-declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_test_stp/"
 domain_name="4x4-stp-"
 
@@ -17,6 +16,17 @@ for iter in {1..1}; do
 			name_scheme=${name_scheme//--/-}
 			output_exp="${output}${lower_algorithm}${name_scheme}-v${iter}"
 			model=${domain_name}${lower_algorithm}${name_scheme}-v${iter}
+			
+			mkdir -p logs_search/${model}
+			
+			num_jobs=`squeue -u lelis | wc -l`
+			echo ${num_jobs}
+			
+			if [ ${num_jobs} -gt 500 ]; then
+			        sleep 10
+			        num_jobs=`squeue -u lelis | wc -l`
+			        echo ${num_jobs}
+			fi
 				
 			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${file} run_bootstrap_test.sh
 		done

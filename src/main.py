@@ -26,8 +26,8 @@ def search(states, planner, nn_model, ncpus, output='', single_file=False):
         if '.pro' in problem_name:
             problem_name = problem_name[0:problem_name.rfind('.')]
                 
-        if not os.path.exists(log_folder):
-            os.makedirs(log_folder)
+#         if not os.path.exists(log_folder):
+#             os.makedirs(log_folder)
         
         total_expanded = 0
         total_generated = 0
@@ -54,7 +54,8 @@ def search(states, planner, nn_model, ncpus, output='', single_file=False):
         
         if single_file:
             with open(join(log_folder + problem_name), 'a') as results_file:
-                results_file.write("{:d}, {:d}, {:d}, {:.2f}".format(solution_depth, expanded, generated, partial_time - start_total))
+                results_file.write("{:d}, {:d}, {:d}, {:.2f} \n".format(solution_depth, expanded, generated, partial_time - start_total))
+            print("{:d}, {:d}, {:d}, {:.2f}".format(solution_depth, expanded, generated, partial_time - start_total))
         
     if not single_file:
         end_total = time.time()
