@@ -29,9 +29,9 @@ def search(states, planner, nn_model, ncpus, output='', single_file=False):
 #         if not os.path.exists(log_folder):
 #             os.makedirs(log_folder)
         
-        total_expanded = 0
-        total_generated = 0
-        total_cost = 0
+    total_expanded = 0
+    total_generated = 0
+    total_cost = 0
     
     for _, state in states.items():
         state.reset()
@@ -122,7 +122,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
         
         print('Number solved: ', number_solved)
         if number_solved > 0:
-            for _ in range(10):
+            for _ in range(500):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
 #             if number_solved < 20:

@@ -78,6 +78,53 @@ class ImprovedLevinLoss(LossFunction):
 
         return loss
     
+class RegLevinMSELoss(LossFunction):
+    
+    def __init__(self):
+        self.mse = tf.keras.losses.MeanSquaredError()
+    
+    def compute_loss(self, trajectory, model):
+        images = [s.get_image_representation() for s in trajectory.get_states()]           
+        actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
+        _, probs_softmax, _, logits_h  = model(np.array(images))
+        
+        probs_used_on_path = tf.math.multiply(tf.cast(actions_one_hot, dtype=tf.float64), probs_softmax)
+        probs_used_on_path = tf.math.reduce_sum(probs_used_on_path, axis=1)
+        solution_prob = tf.math.reduce_prod(probs_used_on_path)   
+        
+        weights = model.get_weights()
+        weights_l2_norm = 0
+        for w in weights:
+            weights_l2_norm += tf.norm(w, ord=2)
+        
+        loss = tf.math.divide(1.0, solution_prob)
+                
+        solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
+        loss += self.mse(solution_costs_tf, logits_h) + model._reg_const * weights_l2_norm
+
+        return loss
+    
+class RegLevinLoss(LossFunction):
+    
+    def compute_loss(self, trajectory, model):
+        images = [s.get_image_representation() for s in trajectory.get_states()]           
+        actions_one_hot = tf.one_hot(trajectory.get_actions(), model.get_number_actions())
+        _, probs_softmax, _ = model(np.array(images))
+        
+        probs_used_on_path = tf.math.multiply(tf.cast(actions_one_hot, dtype=tf.float64), probs_softmax)
+        probs_used_on_path = tf.math.reduce_sum(probs_used_on_path, axis=1)
+        solution_prob = tf.math.reduce_prod(probs_used_on_path)   
+        
+        weights = model.get_weights()
+        weights_l2_norm = 0
+        for w in weights:
+            weights_l2_norm += tf.norm(w, ord=2)
+        
+        loss = tf.math.divide(1.0, solution_prob)
+        loss += model._reg_const * weights_l2_norm
+
+        return loss
+    
 class LevinLoss(LossFunction):
     
     def __init__(self):

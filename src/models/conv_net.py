@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from models.loss_functions import LevinLoss, CrossEntropyLoss,\
     CrossEntropyMSELoss, LevinMSELoss, MSELoss, ImprovedLevinLoss,\
-    ImprovedLevinMSELoss
+    ImprovedLevinMSELoss, RegLevinLoss, RegLevinMSELoss
 
 class InvalidLossFunction(Exception):
     pass
@@ -132,6 +132,8 @@ class TwoHeadedConvNet(tf.keras.Model):
             self._loss_function = CrossEntropyMSELoss()
         elif loss_name == 'ImprovedLevinLoss':
             self._loss_function = ImprovedLevinMSELoss()
+        elif loss_name == 'RegLevinLoss':
+            self._loss_function = RegLevinMSELoss()
         else:
             raise InvalidLossFunction
         
@@ -217,6 +219,8 @@ class ConvNet(tf.keras.Model):
             self._loss_function = ImprovedLevinLoss()
         elif loss_name == 'CrossEntropyLoss':
             self._loss_function = CrossEntropyLoss()
+        elif loss_name == 'RegLevinLoss':
+            self._loss_function = RegLevinLoss()
         else:
             raise InvalidLossFunction
         
