@@ -7,8 +7,7 @@ domain_name="4x4-stp-"
 heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic" "") 
 algorithm="Levin"
 
-for iter in {1..1}; do
-echo ${iter}
+for iter in {3..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for loss in ${losses[@]}; do
 			lower_loss=$(echo ${loss} | tr "A-Z" "a-z")
@@ -19,7 +18,7 @@ echo ${iter}
 			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}"
 			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}
 
-			sbatch --output=${output_exp} --export=scheme=${scheme},algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train.sh
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train.sh
 		done
 	done
 done
@@ -27,7 +26,7 @@ done
 heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic") 
 algorithm="LevinStar"
 
-for iter in {1..1}; do
+for iter in {2..2}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for loss in ${losses[@]}; do
 			lower_loss=$(echo ${loss} | tr "A-Z" "a-z")
@@ -38,7 +37,7 @@ for iter in {1..1}; do
 			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}"
 			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}
 
-			sbatch --output=${output_exp} --export=scheme=${scheme},algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train.sh
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train.sh
 		done
 	done
 done

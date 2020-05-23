@@ -7,7 +7,7 @@ domain_name="4x4-stp-"
 heuristic_scheme=("--learned-heuristic --default-heuristic" "--learned-heuristic") 
 algorithm="AStar"
 
-for iter in {1..1}; do
+for iter in {3..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		lower_loss=$(echo ${loss} | tr "A-Z" "a-z")
 		lower_algorithm=$(echo ${algorithm} | tr "A-Z" "a-z")
