@@ -14,13 +14,24 @@ from search.bfs_levin_mult import BFSLevinMult
 from domains.sliding_tile_puzzle import SlidingTilePuzzle
     
    
-def search(states, planner, nn_model, ncpus):
+def search(states, planner, nn_model, ncpus, output='', single_file=False):
     """
     This function runs (best-first) Levin tree search with a learned policy on a set of problems    
     """   
-    total_expanded = 0
-    total_generated = 0
-    total_cost = 0
+    problem_name = ''
+    if single_file:
+        log_folder = 'logs_search/' + output + '/'
+        problem_name = next(iter(states.keys()))
+        
+        if '.pro' in problem_name:
+            problem_name = problem_name[0:problem_name.rfind('.')]
+                
+        if not os.path.exists(log_folder):
+            os.makedirs(log_folder)
+        
+        total_expanded = 0
+        total_generated = 0
+        total_cost = 0
     
     for _, state in states.items():
         state.reset()
@@ -39,13 +50,18 @@ def search(states, planner, nn_model, ncpus):
         total_generated += generated
         total_cost += solution_depth
         
-        print("{:d}, {:d}, {:d}".format(solution_depth, expanded, generated))
+        partial_time = time.time()
         
-    end_total = time.time()
-    print("Cost: {:d} \t Expanded: {:d} \t Generated: {:d}, Time: {:.2f}".format(total_cost,
-                                                                                 total_expanded, 
-                                                                                total_generated, 
-                                                                                end_total - start_total))
+        if single_file:
+            with open(join(log_folder + problem_name), 'a') as results_file:
+                results_file.write("{:d}, {:d}, {:d}, {:.2f}".format(solution_depth, expanded, generated, partial_time - start_total))
+        
+    if not single_file:
+        end_total = time.time()
+        print("Cost: {:d} \t Expanded: {:d} \t Generated: {:d}, Time: {:.2f}".format(total_cost,
+                                                                                    total_expanded, 
+                                                                                    total_generated, 
+                                                                                    end_total - start_total))
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
 #     
@@ -105,7 +121,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
         
         print('Number solved: ', number_solved)
         if number_solved > 0:
-            for _ in range(500):
+            for _ in range(10):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
 #             if number_solved < 20:
@@ -162,6 +178,10 @@ def main():
                         dest='blind_search',
                         help='Perform blind search')
     
+    parser.add_argument('--single-test-file', action='store_true', default=False,
+                        dest='single_test_file',
+                        help='Use this if problem instance is a file containing a single instance.')
+    
     parser.add_argument('--learn', action='store_true', default=False,
                         dest='learning_mode',
                         help='Train as neural model out of the instances from the problem folder')
@@ -170,7 +190,14 @@ def main():
     
     states = {}
     
-    if parameters.problem_domain == 'SlidingTile':
+    if parameters.problem_domain == 'SlidingTile' and parameters.single_test_file:
+        with open(parameters.problems_folder, 'r') as file:
+            problem = file.readline()
+            instance_name = parameters.problems_folder[parameters.problems_folder.rfind('/') + 1:len(parameters.problems_folder)]
+            puzzle = SlidingTilePuzzle(problem)
+            states[instance_name] = puzzle
+    
+    elif parameters.problem_domain == 'SlidingTile':
         puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
     
         for filename in puzzle_files:
@@ -219,10 +246,10 @@ def main():
             if parameters.learning_mode:
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
-                search(states, bfs_planner, nn_model, ncpus)
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
             else:
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus)
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
                 
         if parameters.search_algorithm == 'LevinMult':
         
@@ -236,10 +263,10 @@ def main():
             if parameters.learning_mode:
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
-                search(states, bfs_planner, nn_model, ncpus)
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
             else:
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus)
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
         
         if parameters.search_algorithm == 'AStar':
             bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
@@ -250,9 +277,9 @@ def main():
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus)
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
             else:
-                search(states, bfs_planner, nn_model, ncpus)  
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)  
                 
         if parameters.search_algorithm == 'GBFS':
             bfs_planner = GBFS(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
@@ -263,9 +290,9 @@ def main():
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus)
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
             else:
-                search(states, bfs_planner, nn_model, ncpus)      
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)      
             
 if __name__ == "__main__":
     main()
