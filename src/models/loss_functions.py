@@ -64,7 +64,7 @@ class ImprovedLevinLoss(LossFunction):
         
         d = len(trajectory.get_actions()) + 1
         pi = trajectory.get_solution_pi()
-        expanded = trajectory.get_non_normalized_expanded()
+        expanded = trajectory.get_non_normalized_expanded() + 1 
         
         a = 0
         if pi < 1.0:
@@ -97,9 +97,12 @@ class RegLevinMSELoss(LossFunction):
         for w in weights:
             weights_l2_norm += tf.norm(w, ord=2)
         
-        loss = tf.math.divide(1.0, solution_prob)
+        solution_costs = trajectory.get_solution_costs()
+        solution_cost = solution_costs[len(solution_costs) - 1]
+        
+        loss = tf.math.divide(tf.convert_to_tensor(solution_cost, dtype=tf.float64), solution_prob)
                 
-        solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
+        solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(solution_costs, dtype=tf.float64), 1)
         loss += self.mse(solution_costs_tf, logits_h) + model._reg_const * weights_l2_norm
 
         return loss
@@ -120,7 +123,10 @@ class RegLevinLoss(LossFunction):
         for w in weights:
             weights_l2_norm += tf.norm(w, ord=2)
         
-        loss = tf.math.divide(1.0, solution_prob)
+        solution_costs = trajectory.get_solution_costs()
+        solution_cost = solution_costs[len(solution_costs) - 1]
+        
+        loss = tf.math.divide(tf.convert_to_tensor(solution_cost, dtype=tf.float64), solution_prob)
         loss += model._reg_const * weights_l2_norm
 
         return loss
