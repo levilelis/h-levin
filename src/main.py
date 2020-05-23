@@ -25,9 +25,7 @@ def search(states, planner, nn_model, ncpus, output='', single_file=False):
         
         if '.pro' in problem_name:
             problem_name = problem_name[0:problem_name.rfind('.')]
-            
-        print(problem_name, end = ', ')
-                
+                            
 #         if not os.path.exists(log_folder):
 #             os.makedirs(log_folder)
         
