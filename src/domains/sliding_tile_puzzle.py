@@ -12,7 +12,10 @@ class SlidingTilePuzzle(Environment):
             for tile in tiles:
                 if tile == '':
                     continue
-                self._tiles.append(int(tile))
+                if tile == 'B':
+                    self._tiles.append(0)
+                else:
+                    self._tiles.append(int(tile))
         else:
             self._tiles = tiles
         
