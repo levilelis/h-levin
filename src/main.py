@@ -12,6 +12,7 @@ from search.a_star import AStar
 from search.gbfs import GBFS
 from search.bfs_levin_mult import BFSLevinMult
 from domains.sliding_tile_puzzle import SlidingTilePuzzle
+from domains.sokoban import Sokoban
     
    
 def search(states, planner, nn_model, ncpus, output='', single_file=False):
@@ -218,11 +219,33 @@ def main():
             s = WitnessState()
             s.read_state(join(parameters.problems_folder, file))
             states[file] = s
+    elif parameters.problem_domain == 'Sokoban':
+        problem = []
+        with open(parameters.problems_folder, 'r') as file:
+            all_problems = file.readlines()
         
+        problem_id = 0
+        for line_in_problem in all_problems:
+            if ';' in line_in_problem:
+                if len(problem) > 0:
+                    puzzle = Sokoban(problem)
+                    states[problem_id] = puzzle
+                
+                problem = []
+#                 problem_id = line_in_problem.split(' ')[1].split('\n')[0]
+                problem_id += 1
+            
+            elif '\n' != line_in_problem:
+                problem.append(line_in_problem.split('\n')[0])
+                
+        if len(problem) > 0:
+            puzzle = Sokoban(problem)
+            states[problem_id] = puzzle
+                
 #     input_size = s.get_image_representation().shape
             
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 2))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 1))
     
     k_expansions = 32
     

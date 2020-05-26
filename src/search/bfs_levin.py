@@ -297,4 +297,4 @@ class BFSLevin():
                             _closed.add(children_to_be_evaluated[i].get_game_state())
                         
                     children_to_be_evaluated.clear()
-                    x_input_of_children_to_be_evaluated.clear()      
+                    x_input_of_children_to_be_evaluated.clear()
