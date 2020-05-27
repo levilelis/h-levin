@@ -20,3 +20,6 @@ class Environment(ABC):
     
     def reset(self):
         pass
+    
+    def copy(self):
+        pass

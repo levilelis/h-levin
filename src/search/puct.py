@@ -152,10 +152,11 @@ class PUCT():
             if action is None:
                 return current_node, max_q
         
-        child_state = copy.deepcopy(current_node.get_game_state())
+#         child_state = copy.deepcopy(current_node.get_game_state())
+        child_state = current_node.get_game_state().copy()
         child_state.apply_action(action)
         
-        predicted_h = 0
+        predicted_h = [[0]]
         if self._use_learned_heuristic:
             _, action_probs, predicted_h = self._nn_model.predict(np.array([child_state.get_image_representation()]))
         else:
@@ -211,6 +212,7 @@ class PUCT():
                 return False, None, expanded, 0, puzzle_name
             
             if leaf_node.get_game_state().is_solution():
+                print('Solved puzzle: ', puzzle_name)
                 trajectory = self._store_trajectory_memory(leaf_node, expanded)
                 return True, trajectory, expanded, 0, puzzle_name
             

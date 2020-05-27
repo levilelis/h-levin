@@ -124,7 +124,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
         
         print('Number solved: ', number_solved)
         if number_solved > 0:
-            for _ in range(100):
+            for _ in range(500):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
 #             if number_solved < 20:
@@ -257,8 +257,7 @@ def main():
         nn_model = manager.KerasModel()
         
         if parameters.search_algorithm == 'PUCT':
-            print('Using PUCT')
-        
+       
             bfs_planner = PUCT(parameters.use_heuristic, parameters.use_learned_heuristic)
         
             if parameters.use_learned_heuristic:

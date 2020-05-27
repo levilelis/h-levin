@@ -147,14 +147,12 @@ class BFSLevin():
             probability_distribution = node.get_probability_distribution_actions()
                             
             for a in actions:
-                child = copy.deepcopy(node.get_game_state())
+#                 child = copy.deepcopy(node.get_game_state())
+                child = node.get_game_state().copy()
                 child.apply_action(a)
 
                 if child.is_solution(): 
                     return node.get_g() + 1, expanded, generated
-                
-                if child in _closed:
-                    continue
                 
                 child_node = TreeNode(node, child, node.get_p() + probability_distribution[a], node.get_g() + 1, -1, a)
 
@@ -183,7 +181,10 @@ class BFSLevin():
                             _closed.add(children_to_be_evaluated[i].get_game_state())
                         
                     children_to_be_evaluated.clear()
-                    x_input_of_children_to_be_evaluated.clear()    
+                    x_input_of_children_to_be_evaluated.clear()
+        print('Emptied Open List during search')
+        state.print()
+        return -1, expanded, generated
         
     def _store_trajectory_memory(self, tree_node, expanded):
         """
@@ -261,12 +262,14 @@ class BFSLevin():
                 return False, None, expanded, generated, puzzle_name
                             
             for a in actions:
-                child = copy.deepcopy(node.get_game_state())
+#                 child = copy.deepcopy(node.get_game_state())
+                child = node.get_game_state().copy()
                 child.apply_action(a)
 
                 child_node = TreeNode(node, child, node.get_p() + probability_distribution_log[a], node.get_g() + 1, -1, a)
 
                 if child.is_solution(): 
+                    print('Solved puzzle: ', puzzle_name)
                     trajectory = self._store_trajectory_memory(child_node, expanded)
                     return True, trajectory, expanded, generated, puzzle_name
                 

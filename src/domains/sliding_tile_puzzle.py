@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from domains.environment import Environment
+import copy
 
 class SlidingTilePuzzle(Environment):
     
@@ -35,6 +36,9 @@ class SlidingTilePuzzle(Environment):
         self._W = 1
         self._N = 2
         self._S = 3
+        
+    def copy(self):
+        return copy.deepcopy(self)
         
     def getSize(self):
         return self._size

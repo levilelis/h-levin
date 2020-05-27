@@ -766,24 +766,27 @@ class WitnessState(Environment):
         return self._solution_depth
     
     def copy(self):
-        copy_state = WitnessState(self._lines, 
-                                  self._columns,
-                                  self._line_init,
-                                  self._column_init,
-                                  self._line_goal,
-                                  self._column_goal,
-                                  self._max_lines,
-                                  self._max_columns)
-        
-        copy_state._line_tip = self._line_tip
-        copy_state._column_tip = self._column_tip
-        copy_state._dots[self._line_tip][self._column_tip] = 1
-        
-        copy_state._v_seg = self._v_seg.copy()
-        copy_state._h_seg = self._h_seg.copy()
-        copy_state._cells = self._cells.copy()
-        
-        return copy_state    
+        return copy.deepcopy(self)
+    
+#     def copy(self):
+#         copy_state = WitnessState(self._lines, 
+#                                   self._columns,
+#                                   self._line_init,
+#                                   self._column_init,
+#                                   self._line_goal,
+#                                   self._column_goal,
+#                                   self._max_lines,
+#                                   self._max_columns)
+#         
+#         copy_state._line_tip = self._line_tip
+#         copy_state._column_tip = self._column_tip
+#         copy_state._dots[self._line_tip][self._column_tip] = 1
+#         
+#         copy_state._v_seg = self._v_seg.copy()
+#         copy_state._h_seg = self._h_seg.copy()
+#         copy_state._cells = self._cells.copy()
+#         
+#         return copy_state    
         
         
     def read_state(self, filename):
