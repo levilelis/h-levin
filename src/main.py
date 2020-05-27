@@ -13,6 +13,7 @@ from search.gbfs import GBFS
 from search.bfs_levin_mult import BFSLevinMult
 from domains.sliding_tile_puzzle import SlidingTilePuzzle
 from domains.sokoban import Sokoban
+from search.puct import PUCT
     
    
 def search(states, planner, nn_model, ncpus, output='', single_file=False):
@@ -67,7 +68,7 @@ def search(states, planner, nn_model, ncpus, output='', single_file=False):
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
 #     
-#     search(states, planner, nn_model, ncpus)
+    search(states, planner, nn_model, ncpus)
     
     log_folder = 'logs/'
     models_folder = 'trained_models/' + output
@@ -123,7 +124,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
         
         print('Number solved: ', number_solved)
         if number_solved > 0:
-            for _ in range(500):
+            for _ in range(100):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
 #             if number_solved < 20:
@@ -245,7 +246,7 @@ def main():
 #     input_size = s.get_image_representation().shape
             
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 1))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 2))
     
     k_expansions = 32
     
@@ -254,6 +255,24 @@ def main():
     with KerasManager() as manager:
                 
         nn_model = manager.KerasModel()
+        
+        if parameters.search_algorithm == 'PUCT':
+            print('Using PUCT')
+        
+            bfs_planner = PUCT(parameters.use_heuristic, parameters.use_learned_heuristic)
+        
+            if parameters.use_learned_heuristic:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     
+            else:
+                nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
+            
+            if parameters.learning_mode:
+                bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
+            elif parameters.blind_search:
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
+            else:
+                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
         
         if parameters.search_algorithm == 'Levin' or parameters.search_algorithm == 'LevinStar':
         
