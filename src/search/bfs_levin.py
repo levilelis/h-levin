@@ -298,3 +298,4 @@ class BFSLevin():
                         
                     children_to_be_evaluated.clear()
                     x_input_of_children_to_be_evaluated.clear()
+        print('Emptied Open List in puzzle: ', puzzle_name)

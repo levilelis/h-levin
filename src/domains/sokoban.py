@@ -21,13 +21,10 @@ class Sokoban(Environment):
         
         self._puzzle = np.zeros((self._height, self._width, self._number_channels))
         
-        self._goal_positions = []
-        
         for i in range(self._height):
             for j in range(self._width):
                 if string_state[i][j] == self._goal:
                     self._puzzle[i][j][self._channel_goals] = 1
-                    self._goal_positions.append((i, j))
                     
                 if string_state[i][j] == self._man:
                     self._puzzle[i][j][self._channel_man] = 1
@@ -86,13 +83,13 @@ class Sokoban(Environment):
                 actions.append(self._S)
             elif (self._puzzle[self._y_man + 1][self._x_man][self._channel_walls] == 0 and 
                 self._puzzle[self._y_man + 1][self._x_man][self._channel_boxes] == 1 and
-                self._y_man + 2 > 0 and 
+                self._y_man + 2 < self._height and 
                 self._puzzle[self._y_man + 2][self._x_man][self._channel_walls] == 0 and 
                 self._puzzle[self._y_man + 2][self._x_man][self._channel_boxes] == 0):
                 
                 actions.append(self._S)
                 
-        if self._y_man - 1 < self._height:
+        if self._y_man - 1 > 0:
             if (self._puzzle[self._y_man - 1][self._x_man][self._channel_walls] == 0 and  
                 self._puzzle[self._y_man - 1][self._x_man][self._channel_boxes] == 0):
                 
@@ -110,57 +107,59 @@ class Sokoban(Environment):
     def successors_parent_pruning(self, op):
         actions = []
         
-        if self._x_man + 1 < self._width and not (op == self._W and self._puzzle[self._y_man][self._x_man - 1][self._channel_boxes] == 0):
-            if (self._puzzle[self._y_man][self._x_man + 1][self._channel_walls] == 0 and
-                self._puzzle[self._y_man][self._x_man + 1][self._channel_boxes] == 0):
-                
-                actions.append(self._E)
-            elif (self._puzzle[self._y_man][self._x_man + 1][self._channel_walls] == 0 and 
-                self._puzzle[self._y_man][self._x_man + 1][self._channel_boxes] == 1 and 
-                self._x_man + 2 < self._width and 
-                self._puzzle[self._y_man][self._x_man + 2][self._channel_walls] == 0 and  
-                self._puzzle[self._y_man][self._x_man + 2][self._channel_boxes] == 0):
-                
-                actions.append(self._E)
-            
-        if self._x_man - 1 > 0 and not (op == self._E and self._puzzle[self._y_man][self._x_man + 1][self._channel_boxes] == 0):
-            if (self._puzzle[self._y_man][self._x_man - 1][self._channel_walls] == 0 and  
-                self._puzzle[self._y_man][self._x_man - 1][self._channel_boxes] == 0):
-                
-                actions.append(self._W)
-            elif (self._puzzle[self._y_man][self._x_man - 1][self._channel_walls] == 0 and  
-                self._puzzle[self._y_man][self._x_man - 1][self._channel_boxes] == 1 and
-                self._x_man - 2 > 0 and 
-                self._puzzle[self._y_man][self._x_man - 2][self._channel_walls] == 0 and  
-                self._puzzle[self._y_man][self._x_man - 2][self._channel_boxes] == 0):
-                
-                actions.append(self._W)
-                
-        if self._y_man + 1 < self._height and not (op == self._N and self._puzzle[self._y_man - 1][self._x_man][self._channel_boxes] == 0):
-            if (self._puzzle[self._y_man + 1][self._x_man][self._channel_walls] == 0 and  
-                self._puzzle[self._y_man + 1][self._x_man][self._channel_boxes] == 0):
-                
-                actions.append(self._S)
-            elif (self._puzzle[self._y_man + 1][self._x_man][self._channel_walls] == 0 and 
-                self._puzzle[self._y_man + 1][self._x_man][self._channel_boxes] == 1 and
-                self._y_man + 2 > 0 and 
-                self._puzzle[self._y_man + 2][self._x_man][self._channel_walls] == 0 and 
-                self._puzzle[self._y_man + 2][self._x_man][self._channel_boxes] == 0):
-                
-                actions.append(self._S)
-                
-        if self._y_man - 1 < self._height and not (op == self._S and self._puzzle[self._y_man + 1][self._x_man][self._channel_boxes] == 0):
-            if (self._puzzle[self._y_man - 1][self._x_man][self._channel_walls] == 0 and  
-                self._puzzle[self._y_man - 1][self._x_man][self._channel_boxes] == 0):
-                
-                actions.append(self._N)
-            elif (self._puzzle[self._y_man - 1][self._x_man][self._channel_walls] == 0 and  
-                self._puzzle[self._y_man - 1][self._x_man][self._channel_boxes] == 1 and
-                self._y_man - 2 > 0 and 
-                self._puzzle[self._y_man - 2][self._x_man][self._channel_walls] == 0 and  
-                self._puzzle[self._y_man - 2][self._x_man][self._channel_boxes] == 0):
-                
-                actions.append(self._N)
+        return self.successors()
+        
+#         if self._x_man + 1 < self._width and not (op == self._W and self._puzzle[self._y_man][self._x_man - 1][self._channel_boxes] == 0):
+#             if (self._puzzle[self._y_man][self._x_man + 1][self._channel_walls] == 0 and
+#                 self._puzzle[self._y_man][self._x_man + 1][self._channel_boxes] == 0):
+#                 
+#                 actions.append(self._E)
+#             elif (self._puzzle[self._y_man][self._x_man + 1][self._channel_walls] == 0 and 
+#                 self._puzzle[self._y_man][self._x_man + 1][self._channel_boxes] == 1 and 
+#                 self._x_man + 2 < self._width and 
+#                 self._puzzle[self._y_man][self._x_man + 2][self._channel_walls] == 0 and  
+#                 self._puzzle[self._y_man][self._x_man + 2][self._channel_boxes] == 0):
+#                 
+#                 actions.append(self._E)
+#             
+#         if self._x_man - 1 > 0 and not (op == self._E and self._puzzle[self._y_man][self._x_man + 1][self._channel_boxes] == 0):
+#             if (self._puzzle[self._y_man][self._x_man - 1][self._channel_walls] == 0 and  
+#                 self._puzzle[self._y_man][self._x_man - 1][self._channel_boxes] == 0):
+#                 
+#                 actions.append(self._W)
+#             elif (self._puzzle[self._y_man][self._x_man - 1][self._channel_walls] == 0 and  
+#                 self._puzzle[self._y_man][self._x_man - 1][self._channel_boxes] == 1 and
+#                 self._x_man - 2 > 0 and 
+#                 self._puzzle[self._y_man][self._x_man - 2][self._channel_walls] == 0 and  
+#                 self._puzzle[self._y_man][self._x_man - 2][self._channel_boxes] == 0):
+#                 
+#                 actions.append(self._W)
+#                 
+#         if self._y_man + 1 < self._height and not (op == self._N and self._puzzle[self._y_man - 1][self._x_man][self._channel_boxes] == 0):
+#             if (self._puzzle[self._y_man + 1][self._x_man][self._channel_walls] == 0 and  
+#                 self._puzzle[self._y_man + 1][self._x_man][self._channel_boxes] == 0):
+#                 
+#                 actions.append(self._S)
+#             elif (self._puzzle[self._y_man + 1][self._x_man][self._channel_walls] == 0 and 
+#                 self._puzzle[self._y_man + 1][self._x_man][self._channel_boxes] == 1 and
+#                 self._y_man + 2 < self._height and 
+#                 self._puzzle[self._y_man + 2][self._x_man][self._channel_walls] == 0 and 
+#                 self._puzzle[self._y_man + 2][self._x_man][self._channel_boxes] == 0):
+#                 
+#                 actions.append(self._S)
+#                 
+#         if self._y_man - 1 > 0 and not (op == self._S and self._puzzle[self._y_man + 1][self._x_man][self._channel_boxes] == 0):
+#             if (self._puzzle[self._y_man - 1][self._x_man][self._channel_walls] == 0 and  
+#                 self._puzzle[self._y_man - 1][self._x_man][self._channel_boxes] == 0):
+#                 
+#                 actions.append(self._N)
+#             elif (self._puzzle[self._y_man - 1][self._x_man][self._channel_walls] == 0 and  
+#                 self._puzzle[self._y_man - 1][self._x_man][self._channel_boxes] == 1 and
+#                 self._y_man - 2 > 0 and 
+#                 self._puzzle[self._y_man - 2][self._x_man][self._channel_walls] == 0 and  
+#                 self._puzzle[self._y_man - 2][self._x_man][self._channel_boxes] == 0):
+#                 
+#                 actions.append(self._N)
     
         return actions;
     
