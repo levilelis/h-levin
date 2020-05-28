@@ -86,6 +86,7 @@ class GBFS():
         """
         state = data[0] 
         nn_model = data[1]
+        budget = data[2]
         
         _open = []
         _closed = set()
@@ -105,6 +106,9 @@ class GBFS():
             node = heapq.heappop(_open)
             
             expanded += 1
+            
+            if budget > 0 and expanded > budget:
+                    return -1, expanded, generated
             
             actions = node.get_game_state().successors_parent_pruning(node.get_action())             
                 

@@ -338,6 +338,7 @@ class PUCT():
         """
         state = data[0] 
         self._nn_model = data[1]
+        budget = data[2]
         
         expanded = 0
         
@@ -368,6 +369,9 @@ class PUCT():
                         actions.append(action)
                         
                         expanded += 1
+                        
+                        if budget > 0 and expanded > budget:
+                            return -1, expanded, 0
                     
             leaves, values = self._evaluate(nodes, actions)
             

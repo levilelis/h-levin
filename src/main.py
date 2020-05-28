@@ -16,7 +16,7 @@ from domains.sokoban import Sokoban
 from search.puct import PUCT
     
    
-def search(states, planner, nn_model, ncpus, output='', single_file=False):
+def search(states, planner, nn_model, ncpus, search_budget=-1, output='', single_file=False):
     """
     This function runs (best-first) Levin tree search with a learned policy on a set of problems    
     """   
@@ -41,30 +41,31 @@ def search(states, planner, nn_model, ncpus, output='', single_file=False):
     start_total = time.time()
     
     with ProcessPoolExecutor(max_workers = ncpus) as executor:
-        args = ((state, nn_model) for name, state in states.items()) 
+        args = ((state, nn_model, search_budget) for name, state in states.items()) 
         results = executor.map(planner.search, args)
     for result in results:
         solution_depth = result[0]
         expanded = result[1]
         generated = result[2]
         
-        total_expanded += expanded
-        total_generated += generated
-        total_cost += solution_depth
+        if solution_depth > 0:
+            total_expanded += expanded
+            total_generated += generated
+            total_cost += solution_depth
         
         partial_time = time.time()
         
         if single_file:
             with open(join(log_folder + problem_name), 'a') as results_file:
                 results_file.write("{:d}, {:d}, {:d}, {:.2f} \n".format(solution_depth, expanded, generated, partial_time - start_total))
-            print("{:d}, {:d}, {:d}, {:.2f}".format(solution_depth, expanded, generated, partial_time - start_total))
+        print("{:d}, {:d}, {:d}, {:.2f}".format(solution_depth, expanded, generated, partial_time - start_total))
         
-    if not single_file:
-        end_total = time.time()
-        print("Cost: {:d} \t Expanded: {:d} \t Generated: {:d}, Time: {:.2f}".format(total_cost,
-                                                                                    total_expanded, 
-                                                                                    total_generated, 
-                                                                                    end_total - start_total))
+#     if not single_file:
+#         end_total = time.time()
+#         print("Cost: {:d} \t Expanded: {:d} \t Generated: {:d}, Time: {:.2f}".format(total_cost,
+#                                                                                     total_expanded, 
+#                                                                                     total_generated, 
+#                                                                                     end_total - start_total))
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
 #     
@@ -139,7 +140,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
                                 
         iteration += 1
     
-    search(states, planner, nn_model, ncpus)
+    search(states, planner, nn_model, ncpus, -1)
 
 
 def main():
@@ -271,10 +272,10 @@ def main():
             if parameters.learning_mode:
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
             else:
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
         
         if parameters.search_algorithm == 'Levin' or parameters.search_algorithm == 'LevinStar':
         
@@ -291,10 +292,10 @@ def main():
             if parameters.learning_mode:
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
             else:
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
                 
         if parameters.search_algorithm == 'LevinMult':
         
@@ -308,10 +309,10 @@ def main():
             if parameters.learning_mode:
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
             else:
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
         
         if parameters.search_algorithm == 'AStar':
             bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
@@ -322,9 +323,9 @@ def main():
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
             else:
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)  
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)  
                 
         if parameters.search_algorithm == 'GBFS':
             bfs_planner = GBFS(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
@@ -335,9 +336,9 @@ def main():
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
             else:
-                search(states, bfs_planner, nn_model, ncpus, parameters.model_name, parameters.single_test_file)      
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.search_budget), parameters.model_name, parameters.single_test_file)      
             
 if __name__ == "__main__":
     main()
