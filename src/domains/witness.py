@@ -5,6 +5,7 @@ from domains.environment import Environment
 import matplotlib.pyplot as plt
 import random
 from collections import deque
+import copy
 
 class InvalidPuzzlePositionException(Exception):
     pass

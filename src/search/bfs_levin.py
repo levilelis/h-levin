@@ -255,6 +255,7 @@ class BFSLevin():
             node = heapq.heappop(_open)                            
                 
             expanded += 1
+
             actions = node.get_game_state().successors_parent_pruning(node.get_action())
             probability_distribution_log = node.get_probability_distribution_actions()
             

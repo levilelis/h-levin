@@ -68,7 +68,7 @@ def search(states, planner, nn_model, ncpus, output='', single_file=False):
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
 #     
-    search(states, planner, nn_model, ncpus)
+#     search(states, planner, nn_model, ncpus)
     
     log_folder = 'logs/'
     models_folder = 'trained_models/' + output
@@ -139,6 +139,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
                                 
         iteration += 1
     
+    print('Searching with the new policy')
     search(states, planner, nn_model, ncpus)
 
 
@@ -161,13 +162,16 @@ def main():
                         help='Name of the folder of the neural model')
     
     parser.add_argument('-a', action='store', dest='search_algorithm',
-                        help='Name of the search algorithm (Levin or AStar)')
+                        help='Name of the search algorithm (Levin, LevinStar, AStar, GBFS, PUCT)')
     
     parser.add_argument('-d', action='store', dest='problem_domain',
                         help='Problem domain (Witness or SlidingTile)')
     
     parser.add_argument('-b', action='store', dest='search_budget',
                         help='The initial budget (nodes expanded) allowed to the bootstrap procedure')
+    
+    parser.add_argument('-cpuct', action='store', dest='cpuct', default='1.0', 
+                        help='Constant C used with PUCT.')
     
     parser.add_argument('--default-heuristic', action='store_true', default=False,
                         dest='use_heuristic',
@@ -258,7 +262,7 @@ def main():
         
         if parameters.search_algorithm == 'PUCT':
        
-            bfs_planner = PUCT(parameters.use_heuristic, parameters.use_learned_heuristic)
+            bfs_planner = PUCT(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions, float(parameters.cpuct))
         
             if parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     
