@@ -7,4 +7,4 @@
 
 module load python/3.6
 source tensorflow/bin/activate
-python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} --single-test-file -d SlidingTile
+python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 10000 -d SlidingTile
