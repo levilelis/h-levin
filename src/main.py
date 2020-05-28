@@ -139,7 +139,6 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
                                 
         iteration += 1
     
-    print('Searching with the new policy')
     search(states, planner, nn_model, ncpus)
 
 

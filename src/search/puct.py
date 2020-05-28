@@ -35,11 +35,11 @@ class PUCTTreeNode:
         self._N_total += 1
         self._N[action] += 1
         
-        if self._Q[action] is None or value < self._Q[action]:
-            self._Q[action] = value
+#         if self._Q[action] is None or value < self._Q[action]:
+#             self._Q[action] = value
         
-#         self._W[action] += value
-#         self._Q[action] = self._W[action] / self._N[action]
+        self._W[action] += value
+        self._Q[action] = self._W[action] / self._N[action]
     
     def is_root(self):
         return self._parent is None
