@@ -1,13 +1,13 @@
 #!/bin/bash
 
+#declare -a losses=("CrossEntropyLoss" "LevinLoss")
 declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss" "RegLevinLoss")
-output="output_train_stp/"
-domain_name="4x4-stp-"
-problems_dir="problems/stp/puzzles_4x4_test/"
+output="output_train_sokoban/"
+domain_name="10x10-sokoban-"
+algorithm="Levin"
 
-#heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic") 
 heuristic_scheme=("--learned-heuristic")
-algorithm="LevinStar"
+#heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 
 for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do
@@ -19,19 +19,8 @@ for iter in {1..1}; do
 			name_scheme=${name_scheme//--/-}
 			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}"
 			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}
-			
-			mkdir -p logs_search/${model}
-			
-			num_jobs=`squeue -u lelis | wc -l`
-			echo ${num_jobs}
-			
-			while [ ${num_jobs} -gt 500 ]; do
-				sleep 60
-			        num_jobs=`squeue -u lelis | wc -l`
-			        #echo ${num_jobs}
-			done
 
-			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${problems_dir} run_bootstrap_test.sh
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train_sokoban.sh
 		done
 	done
 done

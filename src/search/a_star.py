@@ -3,6 +3,7 @@ import numpy as np
 
 from models.memory import Trajectory
 import copy
+import time
 
 class AStarTreeNode:
     def __init__(self, parent, game_state, g, f, action):
@@ -95,6 +96,8 @@ class AStar():
         nn_model = data[1]
         budget = data[2]
         
+        start_time = time.time()
+        
         _open = []
         _closed = set()
         
@@ -115,7 +118,8 @@ class AStar():
             expanded += 1
             
             if budget > 0 and expanded > budget:
-                return -1, expanded, generated
+                end_time = time.time()
+                return -1, expanded, generated, end_time - start_time
                             
             actions = node.get_game_state().successors_parent_pruning(node.get_action())             
                 
@@ -125,8 +129,9 @@ class AStar():
                 
                 generated += 1
                 
-                if child.is_solution(): 
-                    return node.get_g() + 1, expanded, generated
+                if child.is_solution():
+                    end_time = time.time() 
+                    return node.get_g() + 1, expanded, generated, end_time - start_time
                 
                 if child in _closed:
                     continue

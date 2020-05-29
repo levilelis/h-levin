@@ -7,5 +7,5 @@
 
 module load python/3.6
 source tensorflow/bin/activate
-python src/main.py ${scheme} -a ${algorithm} -l ${loss} -m ${model} -p problems/sokoban/train/000.txt --learn -d Sokoban -b 10000
+python src/main.py ${scheme} -a ${algorithm} -l ${loss} -m ${model} -p problems/sokoban/train/000.txt --learn -d Sokoban -b 2000
 

@@ -1,6 +1,7 @@
 import numpy as np
 
 from models.memory import Trajectory
+import time
 
 class PUCTTreeNode:
     def __init__(self, parent, game_state, action, action_probs, g_cost, cpuct=1.0):
@@ -342,6 +343,8 @@ class PUCT():
         
         expanded = 0
         
+        start_time = time.time()
+        
         if self._use_learned_heuristic:
             _, action_probs, _ = self._nn_model.predict(np.array([state.get_image_representation()]))
         else:
@@ -371,13 +374,15 @@ class PUCT():
                         expanded += 1
                         
                         if budget > 0 and expanded > budget:
-                            return -1, expanded, 0
+                            end_time = time.time()
+                            return -1, expanded, 0, end_time - start_time
                     
             leaves, values = self._evaluate(nodes, actions)
             
             for leaf_node in leaves:
                 if leaf_node.get_game_state().is_solution():
-                    return leaf_node.get_g() + 1, expanded, 0
+                    end_time = time.time()
+                    return leaf_node.get_g() + 1, expanded, 0, end_time - start_time
             
             self._backpropagate(leaves, values)
             

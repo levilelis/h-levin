@@ -1,15 +1,14 @@
 #!/bin/bash
 
-declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_train_stp/"
 domain_name="4x4-stp-"
 
-heuristic_scheme=("--learned-heuristic --default-heuristic" "--learned-heuristic") 
+heuristic_scheme=("--learned-heuristic")
+#heuristic_scheme=("--learned-heuristic --default-heuristic" "--learned-heuristic") 
 algorithm="AStar"
 
-for iter in {3..5}; do
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
-		lower_loss=$(echo ${loss} | tr "A-Z" "a-z")
 		lower_algorithm=$(echo ${algorithm} | tr "A-Z" "a-z")
 		name_scheme=${scheme// /}
 		name_scheme=${name_scheme//-heuristic/}

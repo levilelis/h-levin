@@ -3,6 +3,7 @@ import numpy as np
 
 from models.memory import Trajectory
 import copy
+import time
 
 class GBFSTreeNode:
     def __init__(self, parent, game_state, g, h, action):
@@ -85,8 +86,13 @@ class GBFS():
         Returns solution cost, number of nodes expanded, and generated
         """
         state = data[0] 
-        nn_model = data[1]
-        budget = data[2]
+        puzzle_name = data[1]
+        nn_model = data[2]
+        budget = data[3]
+        start_time = data[4]
+        time_limit = data[5]
+        
+        start_time = time.time()
         
         _open = []
         _closed = set()
@@ -105,10 +111,11 @@ class GBFS():
         while len(_open) > 0:
             node = heapq.heappop(_open)
             
-            expanded += 1
+            expanded += 1               
             
-            if budget > 0 and expanded > budget:
-                    return -1, expanded, generated
+            if (budget > 0 and expanded > budget) or time.time() - start_time + 10 > time_limit:
+                    end_time = time.time()
+                    return -1, expanded, generated, end_time - start_time, puzzle_name
             
             actions = node.get_game_state().successors_parent_pruning(node.get_action())             
                 
@@ -118,8 +125,9 @@ class GBFS():
                 
                 generated += 1
                 
-                if child.is_solution(): 
-                    return node.get_g() + 1, expanded, generated
+                if child.is_solution():
+                    end_time = time.time() 
+                    return node.get_g() + 1, expanded, generated, end_time - start_time, puzzle_name
                 
                 if child in _closed:
                     continue

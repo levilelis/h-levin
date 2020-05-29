@@ -4,6 +4,7 @@ import numpy as np
 from models.memory import Trajectory
 import copy
 import math
+import time
 
 class TreeNode:
     def __init__(self, parent, game_state, p, g, levin_cost, action):
@@ -117,6 +118,8 @@ class BFSLevin():
         nn_model = data[1]
         budget = data[2]
         
+        start_time = time.time()
+        
         _open = []
         _closed = set()
         
@@ -146,7 +149,8 @@ class BFSLevin():
             expanded += 1
             
             if budget > 0 and expanded > budget:
-                return -1, expanded, generated
+                end_time = time.time()
+                return -1, expanded, generated, end_time - start_time
             
             actions = node.get_game_state().successors_parent_pruning(node.get_action())
             probability_distribution = node.get_probability_distribution_actions()
@@ -157,7 +161,8 @@ class BFSLevin():
                 child.apply_action(a)
 
                 if child.is_solution(): 
-                    return node.get_g() + 1, expanded, generated
+                    end_time = time.time()
+                    return node.get_g() + 1, expanded, generated, end_time - start_time
                 
                 child_node = TreeNode(node, child, node.get_p() + probability_distribution[a], node.get_g() + 1, -1, a)
 
@@ -189,7 +194,8 @@ class BFSLevin():
                     x_input_of_children_to_be_evaluated.clear()
         print('Emptied Open List during search')
         state.print()
-        return -1, expanded, generated
+        end_time = time.time()
+        return -1, expanded, generated, end_time - start_time
         
     def _store_trajectory_memory(self, tree_node, expanded):
         """
