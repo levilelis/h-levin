@@ -2,7 +2,6 @@ import heapq
 import numpy as np
 
 from models.memory import Trajectory
-import copy
 import math
 import time
 
@@ -115,8 +114,12 @@ class BFSLevin():
         Returns solution cost, number of nodes expanded, and generated
         """
         state = data[0] 
-        nn_model = data[1]
-        budget = data[2]
+        puzzle_name = data[1]
+        nn_model = data[2]
+        budget = data[3]
+        start_overall_time = data[4]
+        time_limit = data[5]
+        slack_time = data[6]
         
         start_time = time.time()
         
@@ -148,9 +151,9 @@ class BFSLevin():
                 
             expanded += 1
             
-            if budget > 0 and expanded > budget:
-                end_time = time.time()
-                return -1, expanded, generated, end_time - start_time
+            end_time = time.time()
+            if (budget > 0 and expanded > budget) or end_time - start_overall_time + slack_time > time_limit:
+                    return -1, expanded, generated, end_time - start_time, puzzle_name
             
             actions = node.get_game_state().successors_parent_pruning(node.get_action())
             probability_distribution = node.get_probability_distribution_actions()
@@ -162,7 +165,7 @@ class BFSLevin():
 
                 if child.is_solution(): 
                     end_time = time.time()
-                    return node.get_g() + 1, expanded, generated, end_time - start_time
+                    return node.get_g() + 1, expanded, generated, end_time - start_time, puzzle_name
                 
                 child_node = TreeNode(node, child, node.get_p() + probability_distribution[a], node.get_g() + 1, -1, a)
 

@@ -89,13 +89,14 @@ class GBFS():
         puzzle_name = data[1]
         nn_model = data[2]
         budget = data[3]
-        start_time = data[4]
+        start_overall_time = data[4]
         time_limit = data[5]
-        
-        start_time = time.time()
+        slack_time = data[6]
         
         _open = []
         _closed = set()
+        
+        start_time = time.time()
         
         expanded = 0
         generated = 0
@@ -113,8 +114,8 @@ class GBFS():
             
             expanded += 1               
             
-            if (budget > 0 and expanded > budget) or time.time() - start_time + 10 > time_limit:
-                    end_time = time.time()
+            end_time = time.time()
+            if (budget > 0 and expanded > budget) or end_time - start_overall_time + slack_time > time_limit:
                     return -1, expanded, generated, end_time - start_time, puzzle_name
             
             actions = node.get_game_state().successors_parent_pruning(node.get_action())             

@@ -16,13 +16,15 @@ from domains.sokoban import Sokoban
 from search.puct import PUCT
     
    
-def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-1, output='', single_file=False):
+def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-1):
     """
     This function runs (best-first) Levin tree search with a learned policy on a set of problems    
     """          
     total_expanded = 0
     total_generated = 0
     total_cost = 0
+    
+    slack_time = 600
     
     solutions = {}
     
@@ -35,7 +37,7 @@ def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-
     while len(states) > 0:
     
         with ProcessPoolExecutor(max_workers = ncpus) as executor:
-            args = ((state, name, nn_model, search_budget, start_time, time_limit_seconds) for name, state in states.items()) 
+            args = ((state, name, nn_model, search_budget, start_time, time_limit_seconds, slack_time) for name, state in states.items()) 
             results = executor.map(planner.search, args)
         for result in results:
             solution_depth = result[0]
@@ -45,10 +47,8 @@ def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-
             puzzle_name = result[4]
             
             if solution_depth > 0:
-                print('Solved ', puzzle_name)
                 solutions[puzzle_name] = (solution_depth, expanded, generated, running_time)
                 del states[puzzle_name]
-                print('Number of puzzles to go: ', len(states))
             
             if solution_depth > 0:
                 total_expanded += expanded
@@ -56,20 +56,13 @@ def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-
                 total_cost += solution_depth
         
         partial_time = time.time()
-        
-        print('Current running time: ', partial_time - start_time)
-        
-        if partial_time - start_time + 10 > time_limit_seconds or len(states) == 0:
-            
-            print('Finishing with ', partial_time - start_time, ' seconds.')
-            
+                
+        if partial_time - start_time + slack_time > time_limit_seconds or len(states) == 0 or search_budget >= 1000000:            
             for name, data in solutions.items():
                 print("{:s}, {:d}, {:d}, {:d}, {:.2f}".format(name, data[0], data[1], data[2], data[3]))
-            
             return
         
         search_budget *= 2
-        print('Budget: ', search_budget)
 
 def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
 #     
@@ -279,10 +272,10 @@ def main():
             if parameters.learning_mode:
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
         
         if parameters.search_algorithm == 'Levin' or parameters.search_algorithm == 'LevinStar':
         
@@ -299,10 +292,10 @@ def main():
             if parameters.learning_mode:
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
                 
         if parameters.search_algorithm == 'LevinMult':
         
@@ -316,10 +309,10 @@ def main():
             if parameters.learning_mode:
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)            
             elif parameters.blind_search:
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
         
         if parameters.search_algorithm == 'AStar':
             bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
@@ -330,9 +323,9 @@ def main():
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)  
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))  
                 
         if parameters.search_algorithm == 'GBFS':
             bfs_planner = GBFS(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
@@ -343,9 +336,9 @@ def main():
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
                 nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget), parameters.model_name, parameters.single_test_file)      
+                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))      
             
 if __name__ == "__main__":
     main()

@@ -19,19 +19,8 @@ for iter in {1..1}; do
 			name_scheme=${name_scheme//--/-}
 			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}"
 			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}
-			
-			mkdir -p logs_search/${model}
-			
-			num_jobs=`squeue -u lelis | wc -l`
-			echo ${num_jobs}
-			
-			while [ ${num_jobs} -gt 500 ]; do
-				sleep 60
-			        num_jobs=`squeue -u lelis | wc -l`
-			        #echo ${num_jobs}
-			done
 
-			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${problems_dir} run_bootstrap_test.sh
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${problems_dir} run_bootstrap_test_stp.sh
 		done
 	done
 done
