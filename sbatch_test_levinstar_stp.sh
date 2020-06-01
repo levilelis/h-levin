@@ -1,7 +1,7 @@
 #!/bin/bash
 
 declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss" "RegLevinLoss")
-output="output_train_stp/"
+output="output_test_stp/"
 domain_name="4x4-stp-"
 problems_dir="problems/stp/puzzles_4x4_test/"
 

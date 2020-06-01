@@ -3,7 +3,8 @@
 output="output_test_stp/"
 domain_name="4x4-stp-"
 
-heuristic_scheme=("--default-heuristic" "--learned-heuristic")
+heuristic_scheme=("--learned-heuristic")
+#heuristic_scheme=("--default-heuristic" "--learned-heuristic")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--learned-heuristic") 
 algorithm="GBFS"
 problems_dir="problems/stp/puzzles_4x4_test/"
