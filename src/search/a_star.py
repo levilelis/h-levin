@@ -136,9 +136,6 @@ class AStar():
                 if child.is_solution():
                     end_time = time.time() 
                     return node.get_g() + 1, expanded, generated, end_time - start_time, puzzle_name
-                
-                if child in _closed:
-                    continue
 
                 child_node = AStarTreeNode(node, child, node.get_g() + 1, -1, a)
                 
