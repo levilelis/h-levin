@@ -68,8 +68,9 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
 #     
 #     search(states, planner, nn_model, ncpus)
     
-    log_folder = 'logs/'
-    models_folder = 'trained_models/' + output
+    log_folder = 'logs_large/'
+    models_folder = 'trained_models_large/' + output
+    
     if not os.path.exists(models_folder):
         os.makedirs(models_folder)
         
@@ -122,7 +123,7 @@ def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, nc
         
         print('Number solved: ', number_solved)
         if number_solved > 0:
-            for _ in range(500):
+            for _ in range(100):
                 loss = nn_model.train_with_memory(memory)
                 print(loss)
 #             if number_solved < 20:
