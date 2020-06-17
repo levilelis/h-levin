@@ -150,7 +150,7 @@ def main():
     parser = argparse.ArgumentParser()
     
     parser.add_argument('-l', action='store', dest='loss_function', 
-                        default='LevinLoss', 
+                        default='CrossEntropyLoss', 
                         help='Loss Function')
     
     parser.add_argument('-p', action='store', dest='problems_folder',
@@ -275,7 +275,7 @@ def main():
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
-                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
         
         if parameters.search_algorithm == 'Levin' or parameters.search_algorithm == 'LevinStar':
@@ -295,7 +295,7 @@ def main():
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
-                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
                 
         if parameters.search_algorithm == 'LevinMult':
@@ -312,7 +312,7 @@ def main():
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
-                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
         
         if parameters.search_algorithm == 'AStar':
@@ -323,7 +323,7 @@ def main():
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
-                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))  
@@ -336,10 +336,12 @@ def main():
                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
-                nn_model.load_weights(join('trained_models', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))      
             
 if __name__ == "__main__":
     main()
+    
+    
