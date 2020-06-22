@@ -6,6 +6,7 @@ output="output_train_sokoban/"
 domain_name="10x10-sokoban-"
 algorithm="Levin"
 
+scheduler="gbs"
 #heuristic_scheme=("")
 heuristic_scheme=("--learned-heuristic" "")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
@@ -18,10 +19,10 @@ for iter in {1..1}; do
 			name_scheme=${scheme// /}
 			name_scheme=${name_scheme//-heuristic/}
 			name_scheme=${name_scheme//--/-}
-			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}"
-			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}
+			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}"
+			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}
 
-			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train_sokoban.sh
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_sokoban.sh
 		done
 	done
 done
