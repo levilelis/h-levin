@@ -12,10 +12,8 @@ class ProblemNode:
         self._name = name
         self._instance = instance
                        
-        self._cost = (4 ** self._n - 4) * self._k  
-        
-        self._constant = 0
-        
+        self._cost = (2 ** self._n - 2) #* self._k  
+                
     def __lt__(self, other):
         """
         Function less-than used by the heap
@@ -23,7 +21,7 @@ class ProblemNode:
         return self._cost < other._cost
     
     def get_budget(self):
-        return 4 ** self._n - 4 ** (self._n - 1)
+        return (2 ** self._n - 2) - (2 ** (self._n - 1) - 2)
     
     def get_problem_name(self):
         return self._name
@@ -138,6 +136,9 @@ class Bootstrap:
                     puzzle_name = result[4]
                     
                     number_trials += 1
+                    
+                    if number_trials % 10 == 0:
+                        print('Number of Trials: ', number_trials)
             
                     if not solved:
                         # if not solved, then reinsert the same node with a larger budget into the open list              
@@ -173,7 +174,7 @@ class Bootstrap:
             
             # if the number of attempts for solving problems is equal to the number of remaining problems and
             # if the procedure solved problems a new problem, then perform learning 
-            if number_trials >= self._number_problems - number_solved and number_solved > 0:
+            if number_trials >= self._number_problems - len(closed_list) and number_solved > 0:
                 # time required in this iteration of the algorithm
                 end = time.time()
                 # logging details of the latest iteration 

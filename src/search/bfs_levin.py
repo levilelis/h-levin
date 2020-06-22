@@ -284,7 +284,7 @@ class BFSLevin():
                 child_node = TreeNode(node, child, node.get_p() + probability_distribution_log[a], node.get_g() + 1, -1, a)
 
                 if child.is_solution(): 
-                    print('Solved puzzle: ', puzzle_name)
+                    print('Solved puzzle: ', puzzle_name, ' with budget: ', budget)
                     trajectory = self._store_trajectory_memory(child_node, expanded)
                     return True, trajectory, expanded, generated, puzzle_name
                 
