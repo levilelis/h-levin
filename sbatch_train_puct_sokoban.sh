@@ -8,7 +8,7 @@ constants=("1.0" "1.5" "2.0")
 heuristic_scheme=("--learned-heuristic")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 
-for iter in {1..1}; do
+for iter in {2..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for c in "${constants[@]}"; do
 			for loss in ${losses[@]}; do

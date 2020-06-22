@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss" "RegLevinLoss")
-declare -a losses=("CrossEntropyLoss")
-output="output_test_sokoban/"
+declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss" "RegLevinLoss")
+#declare -a losses=("CrossEntropyLoss")
+output="output_test_sokoban_large/"
 domain_name="10x10-sokoban-"
 problems_dir="problems/sokoban/test/000.txt"
 

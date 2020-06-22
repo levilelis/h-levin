@@ -9,7 +9,7 @@ algorithm="LevinStar"
 heuristic_scheme=("--learned-heuristic")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 
-for iter in {3..5}; do
+for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for loss in ${losses[@]}; do
 			lower_loss=$(echo ${loss} | tr "A-Z" "a-z")

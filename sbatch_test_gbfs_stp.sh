@@ -9,7 +9,7 @@ heuristic_scheme=("--learned-heuristic")
 algorithm="GBFS"
 problems_dir="problems/stp/puzzles_4x4_test/"
 
-for iter in {1..1}; do
+for iter in {3..3}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		lower_algorithm=$(echo ${algorithm} | tr "A-Z" "a-z")
 		name_scheme=${scheme// /}

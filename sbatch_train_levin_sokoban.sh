@@ -6,7 +6,8 @@ output="output_train_sokoban/"
 domain_name="10x10-sokoban-"
 algorithm="Levin"
 
-heuristic_scheme=("--learned-heuristic")
+#heuristic_scheme=("")
+heuristic_scheme=("--learned-heuristic" "")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 
 for iter in {1..1}; do
