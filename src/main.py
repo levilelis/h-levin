@@ -230,31 +230,41 @@ def main():
             states[file] = s
     elif parameters.problem_domain == 'Sokoban':
         problem = []
-        with open(parameters.problems_folder, 'r') as file:
-            all_problems = file.readlines()
+        puzzle_files = []
+        if isfile(parameters.problems_folder):
+            puzzle_files.append(parameters.problems_folder)
+        else:
+            puzzle_files = [join(parameters.problems_folder, f) for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
         
         problem_id = 0
-        for line_in_problem in all_problems:
-            if ';' in line_in_problem:
-                if len(problem) > 0:
-                    puzzle = Sokoban(problem)
-                    states['puzzle_' + str(problem_id)] = puzzle
-                
-                problem = []
-#                 problem_id = line_in_problem.split(' ')[1].split('\n')[0]
-                problem_id += 1
+        
+        for filename in puzzle_files:
+            with open(filename, 'r') as file:
+                all_problems = file.readlines()
             
-            elif '\n' != line_in_problem:
-                problem.append(line_in_problem.split('\n')[0])
+            
+            for line_in_problem in all_problems:
+                if ';' in line_in_problem:
+                    if len(problem) > 0:
+                        puzzle = Sokoban(problem)
+                        states['puzzle_' + str(problem_id)] = puzzle
+                    
+                    problem = []
+    #                 problem_id = line_in_problem.split(' ')[1].split('\n')[0]
+                    problem_id += 1
                 
-        if len(problem) > 0:
-            puzzle = Sokoban(problem)
-            states['puzzle_' + str(problem_id)] = puzzle
-                
+                elif '\n' != line_in_problem:
+                    problem.append(line_in_problem.split('\n')[0])
+                    
+            if len(problem) > 0:
+                puzzle = Sokoban(problem)
+                states['puzzle_' + str(problem_id)] = puzzle
+    
+    print('Loaded ', len(states), ' instances')
 #     input_size = s.get_image_representation().shape
             
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 3))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 6))
     
     k_expansions = 32
     

@@ -242,6 +242,8 @@ class BFSLevin():
         budget = data[2]
         nn_model = data[3]
         
+#         print('Attempting ', puzzle_name, ' with budget: ', budget)
+        
         _open = []
         _closed = set()
         

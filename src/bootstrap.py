@@ -12,13 +12,16 @@ class ProblemNode:
         self._name = name
         self._instance = instance
                        
-        self._cost = (2 ** self._n - 2) #* self._k  
+        self._cost = (2 ** self._n - 2) #* self._k
                 
     def __lt__(self, other):
         """
         Function less-than used by the heap
         """
-        return self._cost < other._cost
+        if self._cost != other._cost:
+            return self._cost < other._cost
+        else:
+            return self._name < other._name
     
     def get_budget(self):
         return (2 ** self._n - 2) - (2 ** (self._n - 1) - 2)
@@ -137,8 +140,8 @@ class Bootstrap:
                     
                     number_trials += 1
                     
-                    if number_trials % 10 == 0:
-                        print('Number of Trials: ', number_trials)
+#                     if number_trials % 10 == 0:
+#                         print('Number of Trials: ', number_trials)
             
                     if not solved:
                         # if not solved, then reinsert the same node with a larger budget into the open list              

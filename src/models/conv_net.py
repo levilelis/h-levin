@@ -9,7 +9,7 @@ class InvalidLossFunction(Exception):
 
 class HeuristicConvNet(tf.keras.Model):
     
-    def __init__(self, kernel_size, filters, number_actions, reg_const=0.0001):
+    def __init__(self, kernel_size, filters, number_actions, reg_const=0.001):
         tf.keras.backend.set_floatx('float64')
         
         super(HeuristicConvNet, self).__init__(name='')
@@ -79,7 +79,7 @@ class HeuristicConvNet(tf.keras.Model):
 
 class TwoHeadedConvNet(tf.keras.Model):
     
-    def __init__(self, kernel_size, filters, number_actions, loss_name, reg_const=0.0001):
+    def __init__(self, kernel_size, filters, number_actions, loss_name, reg_const=0.001):
         tf.keras.backend.set_floatx('float64')
         
         super(TwoHeadedConvNet, self).__init__(name='')
@@ -177,7 +177,7 @@ class TwoHeadedConvNet(tf.keras.Model):
 
 class ConvNet(tf.keras.Model):
     
-    def __init__(self, kernel_size, filters, number_actions, loss_name, reg_const=0.0001):
+    def __init__(self, kernel_size, filters, number_actions, loss_name, reg_const=0.001):
         tf.keras.backend.set_floatx('float64')
         
         super(ConvNet, self).__init__(name='')
