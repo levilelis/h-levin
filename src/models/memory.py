@@ -54,6 +54,9 @@ class Memory():
             traject = np.array(self._trajectories)[self._random_indices[i]]
             traject.normalize_expanded(self._max_expanded)
             yield traject
+            
+    def number_trajectories(self):
+        return len(self._trajectories)
     
     def clear(self):
         self._trajectories.clear()

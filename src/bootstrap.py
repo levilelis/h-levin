@@ -11,8 +11,11 @@ class ProblemNode:
         self._n = n
         self._name = name
         self._instance = instance
+        
+#T(k, n) = k A 4^{n-1}       (hence B(k) = T(k, n) - T(k, n-1) = A 4^{k-1})
+#C(k, n) = T(n, k) / p(n)    (for some prior p(k), let's take p(n) = 1/(n(n+1)) )
                        
-        self._cost = (2 ** self._n - 2) #* self._k
+        self._cost = 125 * (2 ** self._n - 1) * self._k * n * (n + 1)
                 
     def __lt__(self, other):
         """
@@ -24,7 +27,7 @@ class ProblemNode:
             return self._name < other._name
     
     def get_budget(self):
-        return (2 ** self._n - 2) - (2 ** (self._n - 1) - 2)
+        return 125 *  (2 ** self._n - 1) * self._k - (125 * (2 ** (self._n - 1) - 1) * self._k)
     
     def get_problem_name(self):
         return self._name
@@ -50,6 +53,7 @@ class Bootstrap:
         self._initial_budget = initial_budget
         self._gradient_steps = gradient_steps
         self._k = ncpus * 3
+        self._batch_size = 32
         
         self._scheduler = scheduler
         
@@ -61,6 +65,7 @@ class Bootstrap:
             
         if not os.path.exists(self._log_folder):
             os.makedirs(self._log_folder)
+            
     
     def _solve_gbs(self, planner, nn_model):
         
@@ -224,6 +229,75 @@ class Bootstrap:
             
             # saving the weights the latest neural model
             nn_model.save_weights(join(self._models_folder, 'model_weights'))
+            
+    def _solve_uniform_online(self, planner, nn_model):
+        iteration = 1
+        number_solved = 0
+        total_expanded = 0
+        total_generated = 0
+        
+        budget = self._initial_budget
+        memory = Memory()
+        start = time.time()
+        
+        current_solved_puzzles = set()
+        last_puzzle = list(self._states)[-1]
+                
+        while len(current_solved_puzzles) < self._number_problems:
+            number_solved = 0
+            
+            batch_problems = {}
+            for name, state in self._states.items():
+                
+                batch_problems[name] = state
+                
+                if len(batch_problems) < self._batch_size and last_puzzle != name:
+                    continue
+            
+                with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
+                    args = ((state, name, budget, nn_model) for name, state in batch_problems.items()) 
+                    results = executor.map(planner.search_for_learning, args)
+                for result in results:
+                    has_found_solution = result[0]
+                    trajectory = result[1]
+                    total_expanded += result[2]
+                    total_generated += result[3]
+                    puzzle_name = result[4]
+                    
+                    if has_found_solution:
+                        memory.add_trajectory(trajectory)
+                     
+                    if has_found_solution and puzzle_name not in current_solved_puzzles:
+                        number_solved += 1
+                        current_solved_puzzles.add(puzzle_name)
+                        
+                if memory.number_trajectories() > 0:
+                    for _ in range(self._gradient_steps):
+                        loss = nn_model.train_with_memory(memory)
+                        print('Loss: ', loss)
+                    memory.clear()
+                    nn_model.save_weights(join(self._models_folder, 'model_weights'))
+                
+                batch_problems.clear() 
+            
+            end = time.time()
+            with open(join(self._log_folder + 'training_bootstrap_' + self._model_name), 'a') as results_file:
+                results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(iteration, 
+                                                                                 number_solved, 
+                                                                                 self._number_problems - len(current_solved_puzzles), 
+                                                                                 budget,
+                                                                                 total_expanded,
+                                                                                 total_generated, 
+                                                                                 end-start)))
+                results_file.write('\n')
+            
+            print('Number solved: ', number_solved)
+            if number_solved == 0:
+                budget *= 2
+                print('Budget: ', budget)
+                continue
+                                    
+            iteration += 1
     
     def _solve_uniform(self, planner, nn_model):
         iteration = 1
@@ -287,5 +361,7 @@ class Bootstrap:
     def solve_problems(self, planner, nn_model):
         if self._scheduler == 'gbs':
             self._solve_gbs(planner, nn_model)
+        elif self._scheduler == 'online':
+            self._solve_uniform_online(planner, nn_model)
         else:
             self._solve_uniform(planner, nn_model)
