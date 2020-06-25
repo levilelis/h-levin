@@ -248,7 +248,8 @@ class BFSLevin():
         expanded = 0
         generated = 0
         
-#         print('Attempting ', puzzle_name, ' with budget: ', budget)
+#         print('Attempting puzzle ', puzzle_name, ' with budget: ', budget)
+#         return False, None, expanded, generated, puzzle_name
         
         if self._use_learned_heuristic:
             action_distribution_log, _, _ = nn_model.predict(np.array([state.get_image_representation()]))

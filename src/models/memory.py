@@ -58,6 +58,10 @@ class Memory():
     def number_trajectories(self):
         return len(self._trajectories)
     
+    def merge_trajectories(self, other):
+        for t in other._trajectories:
+            self._trajectories.append(t)
+    
     def clear(self):
         self._trajectories.clear()
         self._max_expanded = -sys.maxsize

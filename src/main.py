@@ -264,7 +264,7 @@ def main():
 #     input_size = s.get_image_representation().shape
             
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 6))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 3))
     
     k_expansions = 32
     
