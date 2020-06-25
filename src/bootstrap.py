@@ -607,7 +607,7 @@ class Bootstrap:
             self._solve_gbs(planner, nn_model)
         elif self._scheduler == 'online':
             self._solve_uniform_online(planner, nn_model)
-        elif self._scheduler == 'parallel_gbs':
+        elif self._scheduler == 'pgbs':
             self._parallel_gbs(planner, nn_model)
         else:
             self._solve_uniform(planner, nn_model)
