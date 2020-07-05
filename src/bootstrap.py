@@ -48,7 +48,7 @@ class GBS:
         self._planner = planner
         
         # maximum budget 
-        self._kmax = 5
+        self._kmax = 10
         
         # counter for the number of iterations of the algorithm, which is marked by the number of times we train the model
         self._iteration = 1
@@ -70,14 +70,16 @@ class GBS:
         
         # dictionary storing the problem instances to be solved 
         self._problems = {}
-        self._has_solved_problem = [None]
+        
+        self._last_tried_instance = [0 for _ in range(0, self._kmax + 1)]
+        self._has_solved = {} #[False for _ in range(0, self._number_problems + 1)]
         
         # populating the problems dictionary
         id_puzzle = 1
         for name, instance in self._states.items():
             self._problems[id_puzzle] = (name, instance)
-            id_puzzle += 1
-            self._has_solved_problem.append(False) 
+            self._has_solved[id_puzzle] = False
+            id_puzzle += 1 
                    
         # create ProblemNode for the first puzzle in the list of puzzles to be solved
         node = ProblemNode(1, 1, self._problems[1][0], self._problems[1][1])
@@ -88,8 +90,29 @@ class GBS:
         # list containing all puzzles already solved
         self._closed_list = set()
         
-        # list of problems that will be solved in parallel
-        self._problems_to_solve = {}
+    def run_prog(self, k, budget, nn_model):
+        
+        last_idx = self._last_tried_instance[k]
+        idx = last_idx + 1
+        
+        while idx < self._number_problems + 1:
+            if not self._has_solved[idx]:
+                break
+            idx += 1
+            
+        if idx > self._number_problems:
+            return True, None, None, None, None
+
+        self._last_tried_instance[k] = idx
+        
+        data = (self._problems[idx][1], self._problems[idx][0], budget, nn_model)
+        is_solved, trajectory, expanded, generated, _ = self._planner.search_for_learning(data)
+        
+        if is_solved:
+            self._has_solved[idx] = True
+            
+        return idx == self._number_problems, is_solved, trajectory, expanded, generated
+        
         
     def solve(self, nn_model, max_steps):
         # counter for the number of steps in this schedule
@@ -106,7 +129,7 @@ class GBS:
             
             # if the problem was already solved, then we bypass the solving part and 
             # add the children of this node into the open list. 
-            if node.get_n() in self._closed_list:
+            if False and node.get_n() in self._closed_list:
                 # if not halted
                 if node.get_n() < self._number_problems:
                     # if not solved, then reinsert the same node with a larger budget into the open list              
@@ -130,14 +153,17 @@ class GBS:
                 continue
             
             
-            data = (node.get_instance(), node.get_name(), node.get_budget(), nn_model)
-            solved, trajectory, expanded, generated, _ = self._planner.search_for_learning(data)
-            
-            self._total_expanded += expanded
-            self._total_generated += generated
+#             data = (node.get_instance(), node.get_name(), node.get_budget(), nn_model)
+#             solved, trajectory, expanded, generated, _ = self._planner.search_for_learning(data)
+            has_halted, solved, trajectory, expanded, generated = self.run_prog(node.get_k(), node.get_budget(), nn_model)
             
             # if not halted
-            if node.get_n() < self._number_problems:
+            #if node.get_n() < self._number_problems:
+            if not has_halted:
+                self._total_expanded += expanded
+                self._total_generated += generated
+                
+                
                 # if not solved, then reinsert the same node with a larger budget into the open list              
                 child = ProblemNode(node.get_k(), 
                                     node.get_n() + 1,
@@ -145,13 +171,11 @@ class GBS:
                                     self._problems[node.get_n() + 1][1])
                 heapq.heappush(self._open_list, child)
                 
-            if solved:
+            if solved is not None and solved:
                 # if it has solved, then add the puzzle's name to the closed list
                 self._closed_list.add(node.get_n())
                 # store the trajectory as training data
                 self._memory.add_trajectory(trajectory)
-                # mark problem as solved
-                self._has_solved_problem[node.get_n()] = True
                 # increment the counter of problems solved, for logging purposes
                 self._number_solved += 1
                 number_solved_iteration += 1
@@ -188,7 +212,7 @@ class Bootstrap:
         self._initial_budget = initial_budget
         self._gradient_steps = gradient_steps
 #         self._k = ncpus * 3
-        self._batch_size = 1
+        self._batch_size = 32
         
         self._kmax = 10
         
@@ -219,7 +243,7 @@ class Bootstrap:
         states = {}
         counter_puzzles = 1
         for id_puzzle, instance in self._states.items():
-            if counter_puzzles >= number_problems_per_cpu:                
+            if counter_puzzles > number_problems_per_cpu: 
                 gbs = GBS(states, planner)
                 schedulers.append(gbs)
                 counter_puzzles = 0
@@ -228,9 +252,11 @@ class Bootstrap:
             states[id_puzzle] = instance
             counter_puzzles += 1
             
-        if counter_puzzles > 0:           
+        if counter_puzzles > 0:
             gbs = GBS(states, planner)
             schedulers.append(gbs)
+            
+#         print('Schedulers: ', schedulers)
             
         number_problems_solved = 0
         problems_solved_iteration = 0

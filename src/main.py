@@ -14,6 +14,7 @@ from domains.sliding_tile_puzzle import SlidingTilePuzzle
 from domains.sokoban import Sokoban
 from search.puct import PUCT
 from bootstrap import Bootstrap
+from multiprocessing import set_start_method
     
    
 def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-1):
@@ -262,6 +263,8 @@ def main():
     
     print('Loaded ', len(states), ' instances')
 #     input_size = s.get_image_representation().shape
+
+#     set_start_method('forkserver', force=True)
             
     KerasManager.register('KerasModel', KerasModel)
     ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 3))

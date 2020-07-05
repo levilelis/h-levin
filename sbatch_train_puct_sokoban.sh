@@ -8,7 +8,9 @@ constants=("1.0" "1.5" "2.0")
 heuristic_scheme=("--learned-heuristic")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 
-for iter in {2..5}; do
+scheduler="online" 
+
+for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for c in "${constants[@]}"; do
 			for loss in ${losses[@]}; do
@@ -19,10 +21,10 @@ for iter in {2..5}; do
 				name_scheme=${name_scheme//--/-}
 				c_name=${c//./}
 				name_scheme=${name_scheme//--/-}
-				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-c${c_name}-v${iter}"
-				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-c${c_name}-v${iter}
+				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}"
+				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}
 		
-				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train_sokoban.sh
+				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_sokoban.sh
 			done
 		done
 	done
