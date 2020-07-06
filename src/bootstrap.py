@@ -299,7 +299,7 @@ class Bootstrap:
                     # perform a number of gradient descent steps
                     loss = nn_model.train_with_memory(memory)
                     print(loss)
-                    
+                memory.clear()
                 # saving the weights the latest neural model
                 nn_model.save_weights(join(self._models_folder, 'model_weights'))
                     
