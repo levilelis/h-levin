@@ -36,7 +36,7 @@ class WitnessState(Environment):
     # Possible colors for separable bullets
     _colors = ['b', 'r', 'g', 'c', 'y', 'm']
     
-    def __init__(self, lines=1, columns=1, line_init=0, column_init=0, line_goal=1, column_goal=1, max_lines=8, max_columns=8):
+    def __init__(self, lines=1, columns=1, line_init=0, column_init=0, line_goal=1, column_goal=1, max_lines=11, max_columns=11):
         """
         GameState's constructor. The constructor receives as input the variable lines and columns,
          which specify the number of lines and columns of the puzzle; line_init and column_init speficy
@@ -105,6 +105,23 @@ class WitnessState(Environment):
         matrix = np.flipud(matrix)
         pos = np.argwhere(matrix==1)
         return pos[0][0], pos[0][1]
+    
+    def clear_path(self):
+        """
+        This method resets a path that has be written to the state. This is achieved by reseting the following structures:
+        (1) self._v_seg
+        (2) self._h_seg
+        (3) self._dots
+        The tip of the snake is also reset to the init variables. Finally, the only dot filled with one is the tip of the snake.
+        """
+        self._v_seg = np.zeros((self._lines, self._columns+1))
+        self._h_seg = np.zeros((self._lines+1, self._columns))
+        self._dots = np.zeros((self._lines+1, self._columns+1))
+        
+        self._line_tip = self._line_init
+        self._column_tip = self._column_init
+        
+        self._dots[self._line_tip][self._column_tip] = 1
     
     def get_rotate90_action(self, action):
         #up = 0, down = 1, right = 2, left = 3

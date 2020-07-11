@@ -1,49 +1,14 @@
-from domains.witness import WitnessState
-from collections import deque
-import itertools, random
+import argparse
 import numpy as np
 import copy
 import os
-import sys
+import time
+from concurrent.futures.process import ProcessPoolExecutor
+
+from domains.witness import WitnessState
+import random
 
 class PuzzleGenerator:
-    """
-    Generates instances of the "separable-color puzzles" inspired in the game The Witness
-    
-    All puzzles generated are guaranteed to be solvable. This is achieved by first generating
-    a path from the initial position to the goal position. Then, bullets with different colors
-    are placed into different regions of the puzzle (i.e., set of reachable cells). 
-    """
-    def generate_paths(self, lines, columns, line_init, column_init, line_goal, column_goal, budget=100000):
-        """
-        Generates all possible paths for a grid with starting position at (line_init, column_init)
-        and finishing position at (line_goal, column_goal). The grid is defined by a grid of size
-        lines x columns. 
-        
-        Returns a list of paths in the form of GameState instances. 
-        """
-        open_list = deque()
-        closed_list = set()
-        
-        root = WitnessState(lines, columns, line_init, column_init, line_goal, column_goal)
-        open_list.append(root)
-        closed_list.add(root)
-        valid_paths = []
-        
-        while len(open_list) > 0:
-            state = open_list.popleft()
-            actions = state.successors() 
-            for a in actions:
-                c = copy.deepcopy(state)
-                c.apply_action(a)
-                if c.has_tip_reached_goal():
-                    valid_paths.append(c)
-                elif not c in closed_list:
-                    open_list.append(c)
-                    closed_list.add(c)
-            if budget > 0 and len(open_list) >= budget:
-                break
-        return valid_paths
     
     def fill_region(self, state, region, color, prob):
         """
@@ -53,152 +18,163 @@ class PuzzleGenerator:
         filled_with_color = False
         for i in range(0, len(region)):
             random_number = random.random()
+                        
             if random_number <= prob:
                 state.add_color(region[i][0], region[i][1], color)   
                 filled_with_color = True
         return filled_with_color
+        
+    def generate_random_path(self, lines, columns, line_init, column_init, line_goal, column_goal):
+        """
+        Generates a solution path for a grid with starting position at (line_init, column_init)
+        and finishing position at (line_goal, column_goal). The grid is defined by a grid of size
+        lines x columns.
+
+        Returns a GameState instance representing the path.
+        """
+        while True:
+            state = WitnessState(lines, columns, line_init, column_init, line_goal, column_goal)
+            actions = state.successors()
+            while actions:
+                rand_action = random.randint(0, len(actions)-1)
+                state.apply_action(actions[rand_action])
+                if state.has_tip_reached_goal():
+                    return state
+                actions = state.successors()
     
-    def generate_puzzles(self, puzzle_sizes, bullet_probability, puzzle_folder):
-            """
-            Generates a set of puzzles for the sizes given in puzzle_sizes. Currently the puzzles
-            have their starting position at (0, 0) and finishing position at (size[0], size[1]),
-            which is the size of the puzzle's grid. 
-            
-            For each puzzle size the method calls generate_paths to create all paths from the
-            starting and finishing positions. Then, it generates a puzzle while placing a number
-            of bullets in each region of the puzzle (defined by a path). The number of bullets
-            in each region is specified by the parameter bullet_probability, which specifies the
-            probability of a given cell receiving a collored bullet or being left empty.
-            
-            All generated puzzles are saved in a folder determined by variable puzzle_folder. 
-            """
-            color_bullets = [1, 2, 3, 4]
-            puzzles_generated = set()
-            for size in puzzle_sizes:
-                states = self.generate_paths(size[0], size[1], 0, 0, size[0], size[1])
-                puzzle_id = 1
+    
+    def generate_puzzles_of_size(self, input_data):
+        
+        size = input_data[0]
+        minimum_number_regions = input_data[1]
+        color_bullets = input_data[2]
+        bullet_probability = input_data[3]
+          
+        states = []
+        for i in range(1, size[1] + 1):
+            #lines, columns, line_init, column_init, line_goal, column_goal
+            states.append(self.generate_random_path(size[0], size[1], 0, 0, 0, i))
+            states.append(self.generate_random_path(size[0], size[1], 0, 0, size[0], i))
+        for i in range(1, size[0] + 1):
+            #lines, columns, line_init, column_init, line_goal, column_goal
+            states.append(self.generate_random_path(size[0], size[1], 0, 0, i, 0))
+            states.append(self.generate_random_path(size[0], size[1], 0, 0, i, size[1]))
+        
+#             np.random.shuffle(states)
+        filled_states = []
 
-                for state in states:
-                    regions = state.partition_cells()
+        for state in states:
+            regions = state.partition_cells()
+            
+            if len(regions) < minimum_number_regions:
+                continue
+            
+            used_colors = set()
+            for region in regions:
+                color = np.random.randint(1, high=len(color_bullets) + 1)
+                while size[0] > 2 and color in used_colors and len(used_colors) < len(color_bullets):
+                    color = np.random.randint(1, high=len(color_bullets)+1)
+                if self.fill_region(state, region, color, bullet_probability):
+                    used_colors.add(color)
                     
-                    for comb in itertools.product([0] + color_bullets, repeat=len(regions)):
-                        for dot_probability in bullet_probability:
-                            copy_state = copy.deepcopy(state)
-
-                            for index, color in enumerate(comb): 
-                                self.fill_region(copy_state, regions[index], color, dot_probability)
-                                
-                            #copy_state.plot()
-                            copy_state.clear_path()
-                            if copy_state in puzzles_generated:
-                                continue
-                            copy_state.save_state(puzzle_folder + '/' + str(size[0]) + 'x' + str(size[1]) + '_' + str(puzzle_id))
-                            puzzles_generated.add(copy_state)
-                            puzzle_id += 1
-                            
-    def generate_puzzles_random(self, puzzle_sizes, bullet_probability, puzzle_folder, number_puzzles):
+            if len(used_colors) < 2:
+                continue  
+            
+            filled_states.append(state)                         
+        
+        return filled_states
+                
+    def generate_puzzles_with_random_paths(self, puzzle_size, bullet_probability, color_bullets, time_limit, puzzle_folder, number_puzzles, ncpus):
         """
         Generates a set of puzzles for the sizes given in puzzle_sizes. Currently the puzzles
-        have their starting position at (0, 0) and finishing position at (size[0], size[1]),
-        which is the size of the puzzle's grid. 
-        
-        For each puzzle size the method calls generate_paths to create all paths from the
-        starting and finishing positions. Then, it generates a puzzle while placing a number
-        of bullets in each region of the puzzle (defined by a path). The number of bullets
-        in each region is specified by the parameter bullet_probability, which specifies the
-        probability of a given cell receiving a collored bullet or being left empty.
+        have their starting position at (0, 0) and any finishing position at the edge of the grid. 
         
         All generated puzzles are saved in a folder determined by variable puzzle_folder. 
         """
-        #color_bullets = [1, 2, 3, 4]
-        color_bullets = [1, 2]
-        puzzles_generated = {}
-        indice_number_puzzle = 0
-        for size in puzzle_sizes:
-            max_difficulty = False
-            minimum_number_regions = 2
-            if size[0] == 3:
-                max_difficulty = True
-                minimum_number_regions = 2   
-            if size[0] >= 4:
-                max_difficulty = True
-                minimum_number_regions = 4
-            if size[0] >= 6:
-                max_difficulty = True
-                minimum_number_regions = 5    
+        start_time = time.time()
+        
+        puzzles_generated = set()
+        minimum_number_regions = 2
+        if puzzle_size[0] == 3:
+            minimum_number_regions = 2   
+        if puzzle_size[0] >= 4:
+            minimum_number_regions = 4
+        if puzzle_size[0] >= 10:
+            minimum_number_regions = 5                
+        
+        while time.time() - start_time < time_limit - 10 and len(puzzles_generated) < number_puzzles:
             
-                               
-            print('Generating Paths...')
-            
-            states = []
-            for i in range(1, size[1] + 1):
-                states = states + self.generate_paths(size[0], size[1], 0, 0, 0, i)
-                states = states + self.generate_paths(size[0], size[1], 0, 0, size[0], i)
-            for i in range(1, size[0] + 1):
-                states = states + self.generate_paths(size[0], size[1], 0, 0, i, 0)
-                states = states + self.generate_paths(size[0], size[1], 0, 0, i, size[1])
-            
-            print('Generating Puzzles...')
-            np.random.shuffle(states)
-            puzzles_generated[size] = set()
-            puzzle_id = 1
-            while len(puzzles_generated[size]) < number_puzzles[indice_number_puzzle]:
-                print('Currently have ', len(puzzles_generated[size]), ' puzzles')
-                for state in states:
-                    regions = state.partition_cells()
-                    copy_state = copy.deepcopy(state)
-                    
-                    if len(regions) < minimum_number_regions:
-                        continue    
-                    used_colors = set()
-                    for region in regions:
-                        color = np.random.randint(1, high=len(color_bullets)+1)
-                        if max_difficulty:
-                            while color in used_colors and len(used_colors) < len(color_bullets):
-                                color = np.random.randint(1, high=len(color_bullets)+1)
-                        if self.fill_region(copy_state, region, color, bullet_probability):
-                            used_colors.add(color)
-                            
-                    if len(used_colors) < 2:
-                        continue
-                        
-                    copy_state.clear_path()                            
-                    
-                    if copy_state in puzzles_generated[size]:
-                        continue
-                    
-                    puzzles_generated[size].add(copy_state)
-                    copy_state.save_state(puzzle_folder + '/' + str(size[0]) + 'x' + str(size[1]) + '_' + str(puzzle_id))
-                    puzzle_id += 1
-                    
-                    if len(puzzles_generated[size]) == number_puzzles[indice_number_puzzle]:
-                        break
-                if len(puzzles_generated[size]) == 0:
-                    print('No paths with the minimum number of partitions')
-                    break
+            with ProcessPoolExecutor(max_workers = ncpus) as executor:
+                args = ((puzzle_size, minimum_number_regions, color_bullets, bullet_probability) for _ in range(10 * ncpus)) 
+                results = executor.map(self.generate_puzzles_of_size, args)
                 
-            indice_number_puzzle += 1
+                for result in results:
+                    puzzles = result
+                
+                    for puzzle in puzzles:
+                        puzzle.clear_path()
+                    
+                        if puzzle not in puzzles_generated:
+                            puzzles_generated.add(puzzle)        
+        puzzle_id = 1
+        for puzzle in puzzles_generated:
+            puzzle.save_state(puzzle_folder + '/' + str(puzzle_size[0]) + 'x' + str(puzzle_size[1]) + '_' + str(puzzle_id))
+            
+            if puzzle_id == number_puzzles:
+                break
+            
+            puzzle_id += 1
+            
+        print('Generated ', len(puzzles_generated), ' puzzles in ', time.time() - start_time, ' seconds')
 
 def main():
-    if len(sys.argv[1:]) < 1:
-        print('Usage: puzzle_generator.py <name folder>')
-        return
+    parser = argparse.ArgumentParser()
     
-    puzzle_folder = sys.argv[1]
+    parser.add_argument('-folder', action='store', dest='puzzle_folder', 
+                        default='test_puzzle_output', 
+                        help='Folder where the generated instances will be saved')
     
-    if not os.path.exists(puzzle_folder):
-        os.makedirs(puzzle_folder)
-
-#     puzzle_sizes = [(1, 2), (1, 3), (2, 2), (3, 3), (4, 4)]
-#     number_puzzles = [10, 50, 300, 1000, 1000]
-
-    puzzle_sizes = [(6, 6)]
-    number_puzzles = [4000]
+    parser.add_argument('-time', action='store', dest='time_limit', 
+                        default=10, 
+                        help='Time limit in seconds for generating instances')
     
-    #bullet_probability = [0.1, 0.5, 0.9]
+    parser.add_argument('-colors', action='store', dest='colors', 
+                        default=2, 
+                        help='Number of different colors to be used')
+    
+    parser.add_argument('-l', action='store', dest='lines', 
+                        default=1, 
+                        help='Number of lines in puzzles to be generated')
+    
+    parser.add_argument('-c', action='store', dest='columns', 
+                        default=2, 
+                        help='Number of columns in puzzles to be generated')
+    
+    parser.add_argument('-p', action='store', dest='bullet_probability', 
+                        default=0.8, 
+                        help='Probability of placing a bullet in an empty cell')
+    
+    parser.add_argument('-n', action='store', dest='number_puzzles', 
+                        default=1000, 
+                        help='Number of puzzles to be generated')
+    
+    parameters = parser.parse_args()
+    
+    if not os.path.exists(parameters.puzzle_folder):
+        os.makedirs(parameters.puzzle_folder)
+        
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 2))
+    
+    color_bullets = [i for i in range(1, int(parameters.colors) + 1)]
+    
     generator = PuzzleGenerator()
-    #generator.generate_puzzles(puzzle_sizes, bullet_probability, puzzle_folder)
-    generator.generate_puzzles_random(puzzle_sizes, 0.8, puzzle_folder, number_puzzles)
+    generator.generate_puzzles_with_random_paths((int(parameters.lines), int(parameters.columns)), 
+                                                 float(parameters.bullet_probability), 
+                                                 color_bullets, 
+                                                 int(parameters.time_limit), 
+                                                 parameters.puzzle_folder,
+                                                 int(parameters.number_puzzles),
+                                                 ncpus)
             
 if __name__ == "__main__":
     main()

@@ -121,6 +121,9 @@ class GBS:
         # number of problems solved in this iteration
         number_solved_iteration = 0
         
+        # reset the current memory
+        self._memory.clear()
+        
         # main loop of scheduler, iterate while there are problems still to be solved
         while len(self._open_list) > 0 and len(self._closed_list) < self._number_problems:
             
