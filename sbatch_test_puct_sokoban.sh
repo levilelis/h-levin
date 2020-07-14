@@ -2,15 +2,17 @@
 
 declare -a losses=("CrossEntropyLoss")
 
-output="output_test_sokoban/"
+output="output_test_sokoban_large/"
 domain_name="10x10-sokoban-"
 problems_dir="problems/sokoban/test/000.txt"
 
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic") 
 heuristic_scheme=("--learned-heuristic")
-constants=("1.0") 
+constants=("1.5") 
 #constants=("1.0" "1.5" "2.0") 
 algorithm="PUCT"
+
+scheduler="online"
 
 for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do
@@ -23,8 +25,8 @@ for iter in {1..1}; do
 				name_scheme=${name_scheme//--/-}
 				c_name=${c//./}
 				name_scheme=${name_scheme//--/-}
-				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-c${c_name}-v${iter}"
-				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-c${c_name}-v${iter}
+				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}"
+				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}
 				
 				#echo ${output_exp}
 				#echo ${model}

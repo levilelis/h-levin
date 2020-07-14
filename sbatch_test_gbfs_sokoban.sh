@@ -1,13 +1,15 @@
 #!/bin/bash
 
-output="output_test_sokoban/"
+output="output_test_sokoban_large/"
 domain_name="10x10-sokoban-"
 
-#heuristic_scheme=("--learned-heuristic")
-heuristic_scheme=("--default-heuristic" "--learned-heuristic")
+heuristic_scheme=("--learned-heuristic")
+#heuristic_scheme=("--default-heuristic" "--learned-heuristic")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--learned-heuristic") 
 algorithm="GBFS"
 problems_dir="problems/sokoban/test/000.txt"
+
+scheduler="online"
 
 for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do
@@ -15,8 +17,8 @@ for iter in {1..1}; do
 		name_scheme=${scheme// /}
 		name_scheme=${name_scheme//-heuristic/}
 		name_scheme=${name_scheme//--/-}
-		output_exp="${output}${lower_algorithm}${name_scheme}-v${iter}"
-		model=${domain_name}${lower_algorithm}-${name_scheme}-v${iter}
+		output_exp="${output}${lower_algorithm}${name_scheme}-${scheduler}-v${iter}"
+		model=${domain_name}${lower_algorithm}-${name_scheme}-${scheduler}-v${iter}
 		
 		#echo ${output_exp}
 		#echo ${model}	

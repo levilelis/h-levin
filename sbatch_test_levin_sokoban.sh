@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss" "RegLevinLoss")
+declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 #declare -a losses=("CrossEntropyLoss")
 output="output_test_sokoban_large/"
 domain_name="10x10-sokoban-"
@@ -10,6 +10,8 @@ heuristic_scheme=("--learned-heuristic" "")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic" "")
 algorithm="Levin"
 
+scheduler="online"
+
 for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for loss in ${losses[@]}; do
@@ -18,8 +20,8 @@ for iter in {1..1}; do
 			name_scheme=${scheme// /}
 			name_scheme=${name_scheme//-heuristic/}
 			name_scheme=${name_scheme//--/-}
-			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}"
-			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}
+			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}"
+			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}
 
 			#echo ${output_exp}
 			#echo ${model}
