@@ -4,7 +4,7 @@ output="output_train_sokoban/"
 domain_name="10x10-sokoban-"
 algorithm="PUCT"
 declare -a losses=("CrossEntropyLoss")
-constants=("1.0" "1.5" "2.0") 
+constants=("1.5") 
 heuristic_scheme=("--learned-heuristic")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 

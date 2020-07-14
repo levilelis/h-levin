@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #declare -a losses=("CrossEntropyLoss" "LevinLoss")
-declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss" "RegLevinLoss")
+declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_train_sokoban/"
 domain_name="10x10-sokoban-"
 algorithm="Levin"
 
-scheduler="gbs"
+scheduler="online"
 #heuristic_scheme=("")
 heuristic_scheme=("--learned-heuristic" "")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
