@@ -178,6 +178,9 @@ def main():
                         dest='scheduler',
                         help='Run Bootstrap with a scheduler (either uniform or gbs)')
     
+    parser.add_argument('-mix', action='store', dest='mix_epsilon', default='0.0', 
+                        help='Mixture with a uniform policy')
+    
     parser.add_argument('--default-heuristic', action='store_true', default=False,
                         dest='use_heuristic',
                         help='Use the default heuristic as input')
@@ -306,9 +309,9 @@ def main():
         if parameters.search_algorithm == 'Levin' or parameters.search_algorithm == 'LevinStar':
         
             if parameters.search_algorithm == 'Levin':
-                bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, False, k_expansions)
+                bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, False, k_expansions, float(parameters.mix_epsilon))
             else:
-                bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, True, k_expansions)
+                bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, True, k_expansions, float(parameters.mix_epsilon))
         
             if parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     

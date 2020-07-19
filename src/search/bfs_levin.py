@@ -76,11 +76,12 @@ class TreeNode:
 
 class BFSLevin():
     
-    def __init__(self, use_heuristic=True, use_learned_heuristic=False, estimated_probability_to_go=True, k_expansions=32):
+    def __init__(self, use_heuristic=True, use_learned_heuristic=False, estimated_probability_to_go=True, k_expansions=32, mix_epsilon=0.0):
         self._use_heuristic = use_heuristic
         self._use_learned_heuristic = use_learned_heuristic
         self._estimated_probability_to_go = estimated_probability_to_go
         self._k = k_expansions
+        self._mix_epsilon = mix_epsilon
             
     def get_levin_cost_star(self, child_node, predicted_h):
         if self._use_learned_heuristic and self._use_heuristic:
@@ -130,9 +131,11 @@ class BFSLevin():
         generated = 0
         
         if self._use_learned_heuristic:
-            action_distribution_log, _ , _ = nn_model.predict(np.array([state.get_image_representation()]))
+            _, action_distribution, _ = nn_model.predict(np.array([state.get_image_representation()]))
         else:
-            action_distribution_log, _ = nn_model.predict(np.array([state.get_image_representation()]))
+            _, action_distribution = nn_model.predict(np.array([state.get_image_representation()]))
+            
+        action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
         
         node = TreeNode(None, state, 1, 0, 0, -1)
         node.set_probability_distribution_actions(action_distribution_log[0])
@@ -175,9 +178,11 @@ class BFSLevin():
                 if len(children_to_be_evaluated) == self._k or len(_open) == 0:
 
                     if self._use_learned_heuristic:
-                        action_distribution_log, _, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                        _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
                     else:
-                        action_distribution_log, _ = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                        _, action_distribution = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                        
+                    action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
                     
                     for i in range(len(children_to_be_evaluated)):
                         generated += 1
@@ -252,9 +257,11 @@ class BFSLevin():
 #         return False, None, expanded, generated, puzzle_name
         
         if self._use_learned_heuristic:
-            action_distribution_log, _, _ = nn_model.predict(np.array([state.get_image_representation()]))
+            _, action_distribution, _ = nn_model.predict(np.array([state.get_image_representation()]))
         else:
-            action_distribution_log, _ = nn_model.predict(np.array([state.get_image_representation()]))
+            _, action_distribution = nn_model.predict(np.array([state.get_image_representation()]))
+            
+        action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
         
         node = TreeNode(None, state, 1, 0, 0, -1)
         node.set_probability_distribution_actions(action_distribution_log[0])
@@ -298,9 +305,11 @@ class BFSLevin():
                 if len(children_to_be_evaluated) == self._k or len(_open) == 0:
 
                     if self._use_learned_heuristic:
-                        action_distribution_log, _, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                        _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
                     else:
-                        action_distribution_log, _ = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                        _, action_distribution = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                    
+                    action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
                     
                     for i in range(len(children_to_be_evaluated)):
                         generated += 1
