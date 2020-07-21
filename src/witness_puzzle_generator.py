@@ -147,11 +147,11 @@ def main():
                         help='Number of lines in puzzles to be generated')
     
     parser.add_argument('-c', action='store', dest='columns', 
-                        default=2, 
+                        default=4, 
                         help='Number of columns in puzzles to be generated')
     
     parser.add_argument('-p', action='store', dest='bullet_probability', 
-                        default=0.8, 
+                        default=0.6, 
                         help='Probability of placing a bullet in an empty cell')
     
     parser.add_argument('-n', action='store', dest='number_puzzles', 
