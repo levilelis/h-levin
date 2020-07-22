@@ -135,7 +135,7 @@ def main():
                         help='Folder where the generated instances will be saved')
     
     parser.add_argument('-time', action='store', dest='time_limit', 
-                        default=10, 
+                        default=300, 
                         help='Time limit in seconds for generating instances')
     
     parser.add_argument('-colors', action='store', dest='colors', 

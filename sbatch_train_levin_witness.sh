@@ -1,8 +1,8 @@
 #!/bin/bash
 
 declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
-output="output_train_sokoban/"
-domain_name="10x10-sokoban-"
+output="output_train_witness/"
+domain_name="4x4-witness-"
 algorithm="Levin"
 
 scheduler="online"
@@ -19,7 +19,7 @@ for iter in {1..1}; do
 			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}"
 			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}
 
-			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_sokoban.sh
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_witness.sh
 		done
 	done
 done
