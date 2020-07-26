@@ -135,22 +135,24 @@ class GBFS():
                 children_to_be_evaluated.append(child_node)
                 x_input_of_children_to_be_evaluated.append(child.get_image_representation())
                 
-                if len(children_to_be_evaluated) == self._k or len(_open) == 0:
-                    if self._use_learned_heuristic:
-                        predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+            if len(children_to_be_evaluated) >= self._k or len(_open) == 0:
+                if self._use_learned_heuristic:
+                    predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                    
+                for i in range(len(children_to_be_evaluated)):
+            
+                    h_cost = self.get_h_cost(children_to_be_evaluated[i].get_game_state(), 
+                                            predicted_h[i])
+                    children_to_be_evaluated[i].set_h_cost(h_cost)
+                                    
+                    if children_to_be_evaluated[i].get_game_state() not in _closed:
+                        heapq.heappush(_open, children_to_be_evaluated[i])
+                        _closed.add(children_to_be_evaluated[i].get_game_state())
                         
-                    for i in range(len(children_to_be_evaluated)):
+                children_to_be_evaluated.clear()
+                x_input_of_children_to_be_evaluated.clear()
                 
-                        h_cost = self.get_h_cost(children_to_be_evaluated[i].get_game_state(), 
-                                                predicted_h[i])
-                        children_to_be_evaluated[i].set_h_cost(h_cost)
-                                        
-                        if children_to_be_evaluated[i].get_game_state() not in _closed:
-                            heapq.heappush(_open, children_to_be_evaluated[i])
-                            _closed.add(children_to_be_evaluated[i].get_game_state())
-                            
-                    children_to_be_evaluated.clear()
-                    x_input_of_children_to_be_evaluated.clear()
+        print('Emptied Open list: ', puzzle_name)
         
     def _store_trajectory_memory(self, tree_node, expanded):
         """
@@ -233,21 +235,22 @@ class GBFS():
                 children_to_be_evaluated.append(child_node)
                 x_input_of_children_to_be_evaluated.append(child.get_image_representation())
                 
-                if len(children_to_be_evaluated) == self._k or len(_open) == 0:
-                    if self._use_learned_heuristic:
-                        predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
-                        
-                    for i in range(len(children_to_be_evaluated)):
-                
-                        h_cost = self.get_h_cost(children_to_be_evaluated[i].get_game_state(), 
-                                                predicted_h[i])
-                        children_to_be_evaluated[i].set_h_cost(h_cost)
-                                        
-                        if children_to_be_evaluated[i].get_game_state() not in _closed:
-                            heapq.heappush(_open, children_to_be_evaluated[i])
-                            _closed.add(children_to_be_evaluated[i].get_game_state())
-                            
-                    children_to_be_evaluated.clear()
-                    x_input_of_children_to_be_evaluated.clear()
+            if len(children_to_be_evaluated) >= self._k or len(_open) == 0:
+                if self._use_learned_heuristic:
+                    predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                    
+                for i in range(len(children_to_be_evaluated)):
             
+                    h_cost = self.get_h_cost(children_to_be_evaluated[i].get_game_state(), 
+                                            predicted_h[i])
+                    children_to_be_evaluated[i].set_h_cost(h_cost)
+                                    
+                    if children_to_be_evaluated[i].get_game_state() not in _closed:
+                        heapq.heappush(_open, children_to_be_evaluated[i])
+                        _closed.add(children_to_be_evaluated[i].get_game_state())
+                        
+                children_to_be_evaluated.clear()
+                x_input_of_children_to_be_evaluated.clear()
+                
+        print('Emptied Open list: ', puzzle_name)
             

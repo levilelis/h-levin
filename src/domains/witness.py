@@ -317,7 +317,7 @@ class WitnessState(Environment):
                     np.array_equal(self._cells, other._cells) and self._column_init == other._column_init and
                     self._line_init == other._line_init and self._column_goal == other._column_goal and
                     self._line_goal == other._line_goal and self._line_tip == other._line_tip and 
-                    self._column_tip == other._column_tip
+                    self._column_tip == other._column_tip and np.array_equal(self._dots, other._dots)
                 )
         #return np.array_equal(self._v_seg, other._v_seg) and np.array_equal(self._h_seg, other._h_seg) and self.__cell_color_invariant_eq__(other) 
         

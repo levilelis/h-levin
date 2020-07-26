@@ -28,7 +28,7 @@ def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-
     slack_time = 600
     
     solutions = {}
-    
+        
     for name, state in states.items():
         state.reset()
         solutions[name] = (-1, -1, -1, -1)
@@ -37,6 +37,9 @@ def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-
     
     while len(states) > 0:
     
+#         args = [(state, name, nn_model, search_budget, start_time, time_limit_seconds, slack_time) for name, state in states.items()]
+#         solution_depth, expanded, generated, running_time, puzzle_name = planner.search(args[0])
+      
         with ProcessPoolExecutor(max_workers = ncpus) as executor:
             args = ((state, name, nn_model, search_budget, start_time, time_limit_seconds, slack_time) for name, state in states.items()) 
             results = executor.map(planner.search, args)
@@ -270,7 +273,7 @@ def main():
 #     set_start_method('forkserver', force=True)
             
     KerasManager.register('KerasModel', KerasModel)
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 3))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 1))
     
     k_expansions = 32
     

@@ -4,6 +4,7 @@ import numpy as np
 from models.memory import Trajectory
 import math
 import time
+import copy
 
 class TreeNode:
     def __init__(self, parent, game_state, p, g, levin_cost, action):
@@ -90,6 +91,7 @@ class BFSLevin():
         elif self._use_learned_heuristic:
             if predicted_h < 0:
                 predicted_h = 0
+                
             return math.log(predicted_h + child_node.get_g()) - (child_node.get_p() * (1 + (predicted_h/child_node.get_g())))
         else:
             h_value = child_node.get_game_state().heuristic_value()
@@ -160,10 +162,9 @@ class BFSLevin():
             
             actions = node.get_game_state().successors_parent_pruning(node.get_action())
             probability_distribution = node.get_probability_distribution_actions()
-                            
+                       
             for a in actions:
-#                 child = copy.deepcopy(node.get_game_state())
-                child = node.get_game_state().copy()
+                child = copy.deepcopy(node.get_game_state())
                 child.apply_action(a)
 
                 if child.is_solution(): 
@@ -175,35 +176,34 @@ class BFSLevin():
                 children_to_be_evaluated.append(child_node)
                 x_input_of_children_to_be_evaluated.append(child.get_image_representation())
                 
-                if len(children_to_be_evaluated) == self._k or len(_open) == 0:
-
-                    if self._use_learned_heuristic:
-                        _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
-                    else:
-                        _, action_distribution = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
-                        
-                    action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
+            if len(children_to_be_evaluated) >= self._k or len(_open) == 0:
+                if self._use_learned_heuristic:
+                    _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                else:
+                    _, action_distribution = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
                     
-                    for i in range(len(children_to_be_evaluated)):
-                        generated += 1
+                action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
+                
+                for i in range(len(children_to_be_evaluated)):
+                    generated += 1
+                    
+                    if self._estimated_probability_to_go:    
+                        levin_cost = self.get_levin_cost_star(children_to_be_evaluated[i], predicted_h[i])
+                    else:
+                        levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
                         
-                        if self._estimated_probability_to_go:    
-                            levin_cost = self.get_levin_cost_star(children_to_be_evaluated[i], predicted_h[i])
-                        else:
-                            levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
-                        children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution_log[i])
-                        children_to_be_evaluated[i].set_levin_cost(levin_cost)
-                        
-                        if children_to_be_evaluated[i].get_game_state() not in _closed:
-                            heapq.heappush(_open, children_to_be_evaluated[i])
-                            _closed.add(children_to_be_evaluated[i].get_game_state())
-                        
-                    children_to_be_evaluated.clear()
-                    x_input_of_children_to_be_evaluated.clear()
-        print('Emptied Open List during search')
-        state.print()
+                    children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution_log[i])
+                    children_to_be_evaluated[i].set_levin_cost(levin_cost)
+                    
+                    if children_to_be_evaluated[i].get_game_state() not in _closed:
+                        heapq.heappush(_open, children_to_be_evaluated[i])
+                        _closed.add(children_to_be_evaluated[i].get_game_state())
+                    
+                children_to_be_evaluated.clear()
+                x_input_of_children_to_be_evaluated.clear()
+        print('Emptied Open List during search: ', puzzle_name)
         end_time = time.time()
-        return -1, expanded, generated, end_time - start_time
+        return -1, expanded, generated, end_time - start_time, puzzle_name
         
     def _store_trajectory_memory(self, tree_node, expanded):
         """
@@ -287,46 +287,45 @@ class BFSLevin():
                 return False, None, expanded, generated, puzzle_name
                             
             for a in actions:
-#                 child = copy.deepcopy(node.get_game_state())
-                child = node.get_game_state().copy()
+                child = copy.deepcopy(node.get_game_state())
+#                 child = node.get_game_state().copy()
                 child.apply_action(a)
 
                 child_node = TreeNode(node, child, node.get_p() + probability_distribution_log[a], node.get_g() + 1, -1, a)
 
                 if child.is_solution(): 
-                    print('Solved puzzle: ', puzzle_name, ' with budget: ', budget)
+                    print('Solved puzzle: ', puzzle_name, ' expanding ', expanded, ' with budget: ', budget)
                     trajectory = self._store_trajectory_memory(child_node, expanded)
                     return True, trajectory, expanded, generated, puzzle_name
-                
 
                 children_to_be_evaluated.append(child_node)
                 x_input_of_children_to_be_evaluated.append(child.get_image_representation())
                 
-                if len(children_to_be_evaluated) == self._k or len(_open) == 0:
+            if len(children_to_be_evaluated) >= self._k or len(_open) == 0:
 
-                    if self._use_learned_heuristic:
-                        _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                if self._use_learned_heuristic:
+                    _, action_distribution, predicted_h = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                else:
+                    _, action_distribution = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                
+                action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
+                
+                for i in range(len(children_to_be_evaluated)):
+                    generated += 1
+                    
+                    if self._estimated_probability_to_go:    
+                        levin_cost = self.get_levin_cost_star(children_to_be_evaluated[i], predicted_h[i])
                     else:
-                        _, action_distribution = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+                        levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
+                    children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution_log[i])
+                    children_to_be_evaluated[i].set_levin_cost(levin_cost)
+    
                     
-                    action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
+                    if children_to_be_evaluated[i].get_game_state() not in _closed:
+                        heapq.heappush(_open, children_to_be_evaluated[i])
+                        _closed.add(children_to_be_evaluated[i].get_game_state())
                     
-                    for i in range(len(children_to_be_evaluated)):
-                        generated += 1
-                        
-                        if self._estimated_probability_to_go:    
-                            levin_cost = self.get_levin_cost_star(children_to_be_evaluated[i], predicted_h[i])
-                        else:
-                            levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
-                        children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution_log[i])
-                        children_to_be_evaluated[i].set_levin_cost(levin_cost)
-        
-                        
-                        if children_to_be_evaluated[i].get_game_state() not in _closed:
-                            heapq.heappush(_open, children_to_be_evaluated[i])
-                            _closed.add(children_to_be_evaluated[i].get_game_state())
-                        
-                    children_to_be_evaluated.clear()
-                    x_input_of_children_to_be_evaluated.clear()
+                children_to_be_evaluated.clear()
+                x_input_of_children_to_be_evaluated.clear()
         print('Emptied Open List in puzzle: ', puzzle_name)
         return False, None, expanded, generated, puzzle_name
