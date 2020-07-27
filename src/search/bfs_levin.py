@@ -145,7 +145,8 @@ class BFSLevin():
         heapq.heappush(_open, node)
         _closed.add(state)
         
-        predicted_h = np.zeros(self._k)
+        # this array should big enough to have more entries than self._k + the largest number of octions
+        predicted_h = np.zeros(10 * self._k)
         
         children_to_be_evaluated = []
         x_input_of_children_to_be_evaluated= []
@@ -190,7 +191,10 @@ class BFSLevin():
                     if self._estimated_probability_to_go:    
                         levin_cost = self.get_levin_cost_star(children_to_be_evaluated[i], predicted_h[i])
                     else:
-                        levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
+                        if i >= len(predicted_h):
+                            levin_cost = self.get_levin_cost(children_to_be_evaluated[i], None)
+                        else:
+                            levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
                         
                     children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution_log[i])
                     children_to_be_evaluated[i].set_levin_cost(levin_cost)
@@ -269,7 +273,8 @@ class BFSLevin():
         heapq.heappush(_open, node)
         _closed.add(state)
         
-        predicted_h = np.zeros(self._k)
+        # this array should big enough to have more entries than self._k + the largest number of octions
+        predicted_h = np.zeros(10 * self._k)
         
         children_to_be_evaluated = []
         x_input_of_children_to_be_evaluated= []
@@ -316,7 +321,10 @@ class BFSLevin():
                     if self._estimated_probability_to_go:    
                         levin_cost = self.get_levin_cost_star(children_to_be_evaluated[i], predicted_h[i])
                     else:
-                        levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
+                        if i >= len(predicted_h):
+                            levin_cost = self.get_levin_cost(children_to_be_evaluated[i], None)
+                        else:
+                            levin_cost = self.get_levin_cost(children_to_be_evaluated[i], predicted_h[i])
                     children_to_be_evaluated[i].set_probability_distribution_actions(action_distribution_log[i])
                     children_to_be_evaluated[i].set_levin_cost(levin_cost)
     
