@@ -386,7 +386,7 @@ class PUCT():
             for leaf_node in leaves:
                 if leaf_node.get_game_state().is_solution():
                     end_time = time.time()
-                    return leaf_node.get_g() + 1, expanded, 0, end_time - start_time, puzzle_name
+                    return leaf_node.get_g(), expanded, 0, end_time - start_time, puzzle_name
             
             self._backpropagate(leaves, values)
             
