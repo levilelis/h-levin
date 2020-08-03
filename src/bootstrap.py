@@ -221,8 +221,8 @@ class Bootstrap:
         
         self._scheduler = scheduler
         
-        self._log_folder = 'logs_large/'
-        self._models_folder = 'trained_models_large/' + self._model_name
+        self._log_folder = 'logs_online/'
+        self._models_folder = 'trained_models_online/' + self._model_name
         
         if not os.path.exists(self._models_folder):
             os.makedirs(self._models_folder)
@@ -521,6 +521,9 @@ class Bootstrap:
             
             batch_problems = {}
             for name, state in self._states.items():
+                
+                if name in current_solved_puzzles:
+                    continue
                 
                 batch_problems[name] = state
                 
