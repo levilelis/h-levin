@@ -221,13 +221,16 @@ def main():
     elif parameters.problem_domain == 'SlidingTile':
         puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
     
+        j = 1
         for filename in puzzle_files:
             with open(join(parameters.problems_folder, filename), 'r') as file:
                 problems = file.readlines()
                 
                 for i in range(len(problems)):
                     puzzle = SlidingTilePuzzle(problems[i])
-                    states['puzzle_' + str(i)] = puzzle
+                    states['puzzle_' + str(j)] = puzzle
+                    
+                    j += 1
     
     elif parameters.problem_domain == 'Witness':
         puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
