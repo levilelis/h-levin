@@ -37,6 +37,19 @@ class SlidingTilePuzzle(Environment):
         self._N = 2
         self._S = 3
         
+    def is_valid(self):
+        t = 0
+        
+        if not(self._width & 1) > 0:
+            t = self._pos[0] // self._width;
+            
+        for i in range(2, self._size):
+            for l in range(1, i):
+                if self._pos[i] < self._pos[l]:
+                    t += 1
+        
+        return (int(t) & 1) ^ 1 == 1
+        
     def copy(self):
         return copy.deepcopy(self)
         
@@ -57,6 +70,15 @@ class SlidingTilePuzzle(Environment):
             if other._tiles[i] != self._tiles[i]:
                 return False
         return True
+    
+    def save_state(self, filename):
+        file = open(filename, 'a+')
+        
+        for i in range(self._size):
+            file.write(str(self._tiles[i]) + ' ')
+        file.write('\n')
+            
+        file.close()
     
     def successors(self):
         actions = []
