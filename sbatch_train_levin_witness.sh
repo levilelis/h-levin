@@ -2,11 +2,12 @@
 
 declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_train_witness/"
-domain_name="4x4-witness-"
+domain_name="4x4-witness50k-"
 algorithm="Levin"
 
 scheduler="online"
 heuristic_scheme=("--learned-heuristic" "")
+#heuristic_scheme=("")
 
 for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 output="output_train_witness/"
-domain_name="4x4-witness-"
+domain_name="4x4-witness50k-"
 algorithm="GBFS"
 loss="MSELoss"
 heuristic_scheme=("--learned-heuristic")
