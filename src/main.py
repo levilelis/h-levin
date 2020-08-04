@@ -184,6 +184,9 @@ def main():
     parser.add_argument('-mix', action='store', dest='mix_epsilon', default='0.0', 
                         help='Mixture with a uniform policy')
     
+    parser.add_argument('-w', action='store', dest='weight_astar', default='1.0', 
+                        help='Weight to be used with WA*.')
+    
     parser.add_argument('--default-heuristic', action='store_true', default=False,
                         dest='use_heuristic',
                         help='Use the default heuristic as input')
@@ -306,7 +309,7 @@ def main():
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
-                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
         
         if parameters.search_algorithm == 'Levin' or parameters.search_algorithm == 'LevinStar':
@@ -327,7 +330,7 @@ def main():
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
-                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
                 
         if parameters.search_algorithm == 'LevinMult':
@@ -345,11 +348,11 @@ def main():
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
-                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
         
         if parameters.search_algorithm == 'AStar':
-            bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
+            bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions, float(parameters.weight_astar))
             
             if parameters.learning_mode and parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
@@ -357,7 +360,7 @@ def main():
                 bootstrap.solve_problems(bfs_planner, nn_model)
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
-                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))  
@@ -371,7 +374,7 @@ def main():
                 bootstrap.solve_problems(bfs_planner, nn_model)
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
-                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))      
