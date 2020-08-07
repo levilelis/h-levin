@@ -5,10 +5,11 @@ import copy
 
 class SimpleEnv(Environment):
 
-    def __init__(self, branch, solution_path):
+    def __init__(self, branch, solution_path, printp=False):
         self._branch = branch  # branching factor
         self._solution_path = solution_path  # path to unique solution
         self._path = []
+        self._printp = printp
 
     def copy(self):
         return copy.deepcopy(self)
@@ -31,7 +32,7 @@ class SimpleEnv(Environment):
         return self.successors()
 
     def apply_action(self, action):
-        print("path = {} action = {}".format(self._path, action))
+        if printp: print("path = {} action = {}".format(self._path, action))
         self._path.append(action)
 
     def is_solution(self):
