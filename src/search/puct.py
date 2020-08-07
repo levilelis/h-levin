@@ -252,7 +252,7 @@ class PUCT():
         puzzle_name = data[1]
         budget = data[2]
         self._nn_model = data[3]
-        
+         
         expanded = 0
         
         if self._use_learned_heuristic:
