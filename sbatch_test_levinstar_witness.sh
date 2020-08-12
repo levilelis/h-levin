@@ -3,8 +3,8 @@
 #declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 declare -a losses=("LevinLoss")
 output="output_test_witness/"
-domain_name="4x4-witness-"
-problems_dir="problems/witness/puzzles_4x4_test"
+domain_name="4x4-witness50k-"
+problems_dir="problems/witness/puzzles_4x4_50k_test"
 
 heuristic_scheme=("--learned-heuristic")
 algorithm="LevinStar"
@@ -27,7 +27,7 @@ for iter in {1..1}; do
 			#echo ${output_exp}
 			#echo ${model}
 
-			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${problems_dir},mix_epsilon=${mix_epsilon} run_bootstrap_test_witness.sh
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${problems_dir} run_bootstrap_test_witness.sh
 		done
 	done
 done

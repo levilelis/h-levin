@@ -2,8 +2,8 @@
 
 declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_test_witness/"
-domain_name="4x4-witness-"
-problems_dir="problems/witness/puzzles_4x4_test"
+domain_name="4x4-witness50k-"
+problems_dir="problems/witness/puzzles_4x4_50k_test"
 
 heuristic_scheme=("--learned-heuristic" "")
 algorithm="Levin"
