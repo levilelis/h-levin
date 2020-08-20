@@ -4,7 +4,7 @@ output="output_train_witness/"
 domain_name="4x4-witness50k-"
 algorithm="PUCT"
 declare -a losses=("CrossEntropyLoss")
-constants=("1.5") 
+constants=("1.0" "1.5" "2.0") 
 heuristic_scheme=("--learned-heuristic")
 
 scheduler="online" 
