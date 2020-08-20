@@ -1,14 +1,17 @@
 #!/bin/bash
 
-output="output_train_sokoban/"
-domain_name="10x10-sokoban-"
-algorithm="PUCT"
 declare -a losses=("CrossEntropyLoss")
-constants=("1.0" "1.5" "2.0") 
-heuristic_scheme=("--learned-heuristic")
-#heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 
-scheduler="online" 
+output="output_test_witness/"
+domain_name="4x4-witness50k-"
+problems_dir="problems/witness/puzzles_4x4_50k_test"
+ 
+heuristic_scheme=("--learned-heuristic")
+constants=("1.5") 
+#constants=("1.0" "1.5" "2.0") 
+algorithm="PUCT"
+
+scheduler="online"
 
 for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do
@@ -23,8 +26,11 @@ for iter in {1..1}; do
 				name_scheme=${name_scheme//--/-}
 				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}"
 				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}
-		
-				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_puct_sokoban.sh
+				
+				#echo ${output_exp}
+				#echo ${model}
+									
+				sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},constant=${c},model=${model},problem=${problems_dir} run_bootstrap_test_puct_witness.sh
 			done
 		done
 	done

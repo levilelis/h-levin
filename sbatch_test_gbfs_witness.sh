@@ -1,11 +1,11 @@
 #!/bin/bash
 
 output="output_test_witness/"
-domain_name="4x4-witness-"
+domain_name="4x4-witness50k-"
 
 heuristic_scheme=("--learned-heuristic")
 algorithm="GBFS"
-problems_dir="problems/witness/puzzles_4x4_test"
+problems_dir="problems/witness/puzzles_4x4_50k_test"
 
 scheduler="online"
 
