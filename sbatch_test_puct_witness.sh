@@ -7,8 +7,8 @@ domain_name="4x4-witness50k-"
 problems_dir="problems/witness/puzzles_4x4_50k_test"
  
 heuristic_scheme=("--learned-heuristic")
-constants=("1.5") 
-#constants=("1.0" "1.5" "2.0") 
+#constants=("1.5") 
+constants=("1.0" "1.5" "2.0") 
 algorithm="PUCT"
 
 scheduler="online"

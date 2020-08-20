@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
-declare -a losses=("LevinLoss")
+declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
+#declare -a losses=("LevinLoss")
 output="output_test_witness/"
 domain_name="4x4-witness50k-"
 problems_dir="problems/witness/puzzles_4x4_50k_test"
@@ -21,7 +21,7 @@ for iter in {1..1}; do
 			name_scheme=${name_scheme//-heuristic/}
 			name_scheme=${name_scheme//--/-}
 			#output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-mix${mix_epsilon//./}-v${iter}"
-			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}-debug-fixed-eq-2"
+			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}"
 			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}
 
 			#echo ${output_exp}
