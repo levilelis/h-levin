@@ -3,7 +3,7 @@
 #declare -a losses=("RegLevinLoss")
 declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_train_stp/"
-domain_name="6x6-stp-"
+domain_name="5x5-stp-"
 algorithm="LevinStar"
 
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")

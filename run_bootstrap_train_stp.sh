@@ -7,5 +7,5 @@
 
 module load python/3.6
 source tensorflow/bin/activate
-python src/main.py ${scheme} -a ${algorithm} -l ${loss} -m ${model} -p problems/stp/puzzles_6x6_train/ --learn -d SlidingTile -b 10000 -g 10 -scheduler ${scheduler}
+python src/main.py ${scheme} -a ${algorithm} -l ${loss} -m ${model} -p problems/stp/puzzles_5x5_train/ --learn -d SlidingTile -b 10000 -g 10 -scheduler ${scheduler}
 
