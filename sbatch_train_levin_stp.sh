@@ -19,7 +19,7 @@ for iter in {1..1}; do
 			name_scheme=${name_scheme//-heuristic/}
 			name_scheme=${name_scheme//--/-}
 			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}"
-                        model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}
+            model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}
 
 			#echo ${output_exp}
 			#echo ${model}
