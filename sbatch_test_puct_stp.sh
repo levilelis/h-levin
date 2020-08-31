@@ -2,15 +2,14 @@
 
 declare -a losses=("CrossEntropyLoss")
 output="output_test_stp/"
-domain_name="4x4-stp-"
-problems_dir="problems/stp/puzzles_4x4_test/"
+domain_name="5x5-stp-"
+problems_dir="problems/stp/puzzles_5x5_test/"
 
-#heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic") 
 heuristic_scheme=("--learned-heuristic")
 constants=("1.0" "1.5" "2.0") 
 algorithm="PUCT"
 
-for iter in {1..1}; do
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for c in "${constants[@]}"; do
 			for loss in ${losses[@]}; do

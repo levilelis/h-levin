@@ -1,15 +1,13 @@
 #!/bin/bash
 
 output="output_test_stp/"
-domain_name="4x4-stp-"
+domain_name="5x5-stp-"
 
-heuristic_scheme=("--learned-heuristic")
-#heuristic_scheme=("--default-heuristic" "--learned-heuristic")
-#heuristic_scheme=("--learned-heuristic --default-heuristic" "--learned-heuristic") 
+heuristic_scheme=("--learned-heuristic") 
 algorithm="GBFS"
-problems_dir="problems/stp/puzzles_4x4_test/"
+problems_dir="problems/stp/puzzles_5x5_test/"
 
-for iter in {3..3}; do
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		lower_algorithm=$(echo ${algorithm} | tr "A-Z" "a-z")
 		name_scheme=${scheme// /}
