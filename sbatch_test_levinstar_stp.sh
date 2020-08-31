@@ -1,15 +1,15 @@
 #!/bin/bash
 
-declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss" "RegLevinLoss")
+declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_test_stp/"
-domain_name="4x4-stp-"
-problems_dir="problems/stp/puzzles_4x4_test/"
+domain_name="5x5-stp-"
+problems_dir="problems/stp/puzzles_5x5_test/"
 
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic") 
 heuristic_scheme=("--learned-heuristic")
 algorithm="LevinStar"
 
-for iter in {1..1}; do
+for iter in {2..2}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for loss in ${losses[@]}; do
 			lower_loss=$(echo ${loss} | tr "A-Z" "a-z")
