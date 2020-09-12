@@ -4,7 +4,7 @@ output="output_train_stp/"
 domain_name="5x5-stp-"
 algorithm="GBFS"
 loss="MSELoss"
-heuristic_scheme=("--learned-heuristic")
+heuristic_scheme=("--learned-heuristic --default-heuristic")
 
 scheduler="online"
 

@@ -8,7 +8,7 @@ heuristic_scheme=("--learned-heuristic")
 
 scheduler="online"
 
-for iter in {2..5}; do
+for iter in {1..5}; do
 	for weight in 1.0 1.5 2.0 2.5 3.0; do
 		for scheme in "${heuristic_scheme[@]}"; do
 			lower_algorithm=$(echo ${algorithm} | tr "A-Z" "a-z")

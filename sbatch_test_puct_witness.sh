@@ -13,7 +13,7 @@ algorithm="PUCT"
 
 scheduler="online"
 
-for iter in {1..1}; do
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for c in "${constants[@]}"; do
 			for loss in ${losses[@]}; do

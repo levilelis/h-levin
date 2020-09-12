@@ -11,7 +11,7 @@ algorithm="Levin"
 scheduler="online"
 #mix_epsilon="0.01"
 
-for iter in {1..1}; do
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for loss in ${losses[@]}; do
 			lower_loss=$(echo ${loss} | tr "A-Z" "a-z")

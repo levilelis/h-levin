@@ -9,7 +9,7 @@ heuristic_scheme=("--learned-heuristic")
 
 scheduler="online" 
 
-for iter in {2..5}; do
+for iter in {2..2}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for c in "${constants[@]}"; do
 			for loss in ${losses[@]}; do
