@@ -7,4 +7,4 @@
 
 module load python/3.6
 source tensorflow/bin/activate
-python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 2000 -time 172000 -d Witness
+python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 2000 -time 172000 -d Witness -mix ${mix_epsilon}

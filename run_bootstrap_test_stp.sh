@@ -7,4 +7,4 @@
 
 module load python/3.6
 source tensorflow/bin/activate
-python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 7000 -time 172000 -d SlidingTile
+python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 7000 -time 172000 -d SlidingTile -mix ${mix_epsilon}
