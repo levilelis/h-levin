@@ -33,6 +33,10 @@ def main():
                         default=10000, 
                         help='Number of steps performed backwards from the goal')
     
+    parser.add_argument('-minsteps', action='store', dest='minsteps', 
+                        default=50, 
+                        help='Minimum number of steps performed backwards from the goal')
+    
     parameters = parser.parse_args()
     
     if not os.path.exists(parameters.file_train):
@@ -45,6 +49,7 @@ def main():
     ntrain = int(parameters.ntrain)
     ntest = int(parameters.ntest)
     steps = int(parameters.steps)
+    minsteps = int(parameters.minsteps)
     
     test_instances = set()
     train_instances = set()
@@ -56,7 +61,7 @@ def main():
     for j in range(ntrain):
         state = copy.deepcopy(goal)
         
-        number_steps = random.randint(1, steps)
+        number_steps = random.randint(minsteps, steps)
         for _ in range(number_steps):
             actions = state.successors()
             random_index = random.randint(0, len(actions) - 1)
