@@ -241,66 +241,6 @@ class PUCT():
 
                 node = parent
 
-    def search_for_learning(self, data):
-        """
-        Performs PUCT search bounded by a search budget.
-
-        Returns Boolean indicating whether the solution was found,
-        number of nodes expanded, and number of nodes generated
-        """
-        state = data[0]
-        puzzle_name = data[1]
-        budget = data[2]
-        self._nn_model = data[3]
-
-        expanded = 0
-
-        if self._use_learned_heuristic:
-            _, action_probs, _ = self._nn_model.predict(np.array([state.get_image_representation()]))
-        else:
-            _, action_probs = self._nn_model.predict(np.array([state.get_image_representation()]))
-
-        root = PUCTTreeNode(None, state, -1, action_probs[0], 0, self._cpuct)
-
-        while True:
-            nodes = []
-            actions = []
-            number_trials = 0
-            while len(nodes) == 0:
-                distinct_nodes = set()
-
-                for _ in range(self._k):
-                    leaf_node, action = self._expand(root)
-
-                    if number_trials % 100 == 0 and number_trials != 0:
-                        print(number_trials)
-
-                    if action is None:
-                        number_trials += 1
-                        continue
-
-                    if leaf_node.get_game_state() not in distinct_nodes:
-                        distinct_nodes.add(leaf_node.get_game_state())
-
-                        nodes.append(leaf_node)
-                        actions.append(action)
-
-                        expanded += 1
-
-            leaves, values = self._evaluate(nodes, actions)
-
-            if expanded >= budget:
-                return False, None, expanded, 0, puzzle_name
-
-            for leaf_node in leaves:
-                if leaf_node.get_game_state().is_solution():
-                    print('Solved puzzle: ', puzzle_name)
-                    trajectory = self._store_trajectory_memory(leaf_node, expanded)
-                    return True, trajectory, expanded, 0, puzzle_name
-
-            self._backpropagate(leaves, values)
-
-
     def _store_trajectory_memory(self, tree_node, expanded):
         """
         Receives a tree node representing a solution to the problem.
@@ -337,24 +277,36 @@ class PUCT():
 
         Returns solution cost, number of nodes expanded, and generated
         """
-        state = data[0]
-        puzzle_name = data[1]
-        self._nn_model = data[2]
-        budget = data[3]
-        start_overall_time = data[4]
-        time_limit = data[5]
-        slack_time = data[6]
-
+        state = data['state']
+        puzzle_name = data['puzzle_name']
+        node_budget = data.get('node_budget', -1)
+        time_budget = data.get('time_budget', -1)
+        overall_start_time = data.get('overall_start_time', -1)
+        overall_time_budget = data.get('overall_start_time', -1)
+        slack_time = data.get('slack_time', 0)
+        nn_model = data['nn_model']
+        
+        self._nn_model = nn_model
+        
         expanded = 0
 
         start_time = time.time()
 
         if self._use_learned_heuristic:
-            _, action_probs, _ = self._nn_model.predict(np.array([state.get_image_representation()]))
+            _, action_probs, _ = nn_model.predict(np.array([state.get_image_representation()]))
         else:
-            _, action_probs = self._nn_model.predict(np.array([state.get_image_representation()]))
+            _, action_probs = nn_model.predict(np.array([state.get_image_representation()]))
 
         root = PUCTTreeNode(None, state, -1, action_probs[0], 0, self._cpuct)
+
+        def make_return_dict(status, traj):
+            return {'status': status,
+                    'trajectory': traj,
+                    'solution_depth': -1 if traj is None else len(traj.get_actions()),
+                    'expanded': expanded,
+                    'generated': 0,  # not sure what value to use here. expanded?
+                    'time': time.time() - start_time,
+                    'puzzle_name': puzzle_name}
 
         while True:
             nodes = []
@@ -377,15 +329,24 @@ class PUCT():
 
                         expanded += 1
 
-                        end_time = time.time()
-                        if (budget > 0 and expanded > budget) or end_time - start_overall_time + slack_time > time_limit:
-                                return -1, expanded, 0, end_time - start_time, puzzle_name
+                        curr_time = time.time()
+
+                        # Node expansion budget exceeded for this problem
+                        if node_budget > 0 and expanded > node_budget:
+                            return make_return_dict('node_budget', None)
+                        # Time budget exceeded for all problems
+                        if overall_time_budget > 0 and curr_time - start_overall_time + slack_time > overall_time_budget:
+                            return make_return_dict('overall_time_budget', None)
+                        # Time budget exceeded for this problem
+                        if time_budget > 0 and curr_time - start_time > time_budget:
+                            return make_return_dict('time_budget', None)
 
             leaves, values = self._evaluate(nodes, actions)
 
             for leaf_node in leaves:
                 if leaf_node.get_game_state().is_solution():
                     end_time = time.time()
-                    return leaf_node.get_g(), expanded, 0, end_time - start_time, puzzle_name
+                    trajectory = self._store_trajectory_memory(leaf_node, expanded)
+                    return make_return_dict('solved', trajectory)
 
             self._backpropagate(leaves, values)

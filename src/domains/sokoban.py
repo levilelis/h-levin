@@ -15,6 +15,8 @@ class Sokoban(Environment):
         self._man = '@'
         self._wall = '#'
         self._box = '$'
+        self._man_goal = '+'
+        self._box_goal = '*'
         
         self._E = 0
         self._W = 1
@@ -33,17 +35,18 @@ class Sokoban(Environment):
             
             for i in range(self._height):
                 for j in range(self._width):
-                    if string_state[i][j] == self._goal:
+                    ss = string_state[i][j] 
+                    if ss == self._goal or ss == self._man_goal or ss == self._box_goal:
                         self._maze[i][j][self._channel_goals] = 1
                         
-                    if string_state[i][j] == self._man:
+                    if ss == self._man or ss == self._man_goal:
                         self._y_man = i
                         self._x_man = j
                         
-                    if string_state[i][j] == self._wall:
+                    if ss == self._wall:
                         self._maze[i][j][self._channel_walls] = 1
                         
-                    if string_state[i][j] == self._box:
+                    if ss == self._box or ss == self._box_goal:
                         self._boxes[i][j] = 1
         
     def copy(self):

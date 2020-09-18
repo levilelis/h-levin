@@ -5,6 +5,10 @@ from models.memory import Trajectory
 import copy
 import time
 
+####################################################
+#### OBSOLETE: Use AStar with weight=-1 instead ####
+####################################################
+
 class GBFSTreeNode:
     def __init__(self, parent, game_state, g, h, action):
         self._game_state = game_state
