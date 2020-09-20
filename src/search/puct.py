@@ -276,36 +276,35 @@ class PUCT():
 
                 for _ in range(self._k):
                     leaf_node, action = self._expand(root)
-
+    
                     if number_trials % 100 == 0 and number_trials != 0:
                         print(number_trials)
-
+    
                     if action is None:
                         number_trials += 1
                         continue
                     
                     child_state = leaf_node.get_game_state().copy()
                     child_state.apply_action(action)
-
+                    
+                    if child_state.is_solution():
+                        print('Solved puzzle: ', puzzle_name)
+                        trajectory = self._store_trajectory_memory(leaf_node, expanded)
+                        return True, trajectory, expanded, 0, puzzle_name
+    
                     if child_state not in closed_list:
                         closed_list.add(child_state)
-
+    
                         nodes.append(leaf_node)
                         actions.append(action)
                         children_states.append(child_state)
-
+    
                         expanded += 1
 
             leaves, values = self._evaluate(nodes, actions, children_states)
 
             if expanded >= budget:
                 return False, None, expanded, 0, puzzle_name
-
-            for leaf_node in leaves:
-                if leaf_node.get_game_state().is_solution():
-                    print('Solved puzzle: ', puzzle_name)
-                    trajectory = self._store_trajectory_memory(leaf_node, expanded)
-                    return True, trajectory, expanded, 0, puzzle_name
 
             self._backpropagate(leaves, values)
 
@@ -383,6 +382,10 @@ class PUCT():
                     
                     child_state = leaf_node.get_game_state().copy()
                     child_state.apply_action(action)
+                    
+                    if child_state.is_solution():
+                        end_time = time.time()
+                        return leaf_node.get_g(), expanded, 0, end_time - start_time, puzzle_name
 
                     if child_state not in closed_list:
                         closed_list.add(child_state)
@@ -399,9 +402,9 @@ class PUCT():
 
             leaves, values = self._evaluate(nodes, actions, children_states)
 
-            for leaf_node in leaves:
-                if leaf_node.get_game_state().is_solution():
-                    end_time = time.time()
-                    return leaf_node.get_g(), expanded, 0, end_time - start_time, puzzle_name
+#             for leaf_node in leaves:
+#                 if leaf_node.get_game_state().is_solution():
+#                     end_time = time.time()
+#                     return leaf_node.get_g(), expanded, 0, end_time - start_time, puzzle_name
 
             self._backpropagate(leaves, values)
