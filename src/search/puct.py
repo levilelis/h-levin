@@ -189,17 +189,18 @@ class PUCT():
 
         return current_node, action
 
-    def _evaluate(self, nodes, actions):
+    def _evaluate(self, nodes, actions, children):
 
-        children = []
+#         children = []
         children_image = []
 
         for i in range(len(nodes)):
-            child_state = nodes[i].get_game_state().copy()
-            child_state.apply_action(actions[i])
+#             child_state = nodes[i].get_game_state().copy()
+#             child_state.apply_action(actions[i])
 
-            children.append(child_state)
-            children_image.append(child_state.get_image_representation())
+#             children.append(child_state)
+#             children_image.append(child_state.get_image_representation())
+            children_image.append(children[i].get_image_representation())
 
 
         predicted_h = np.zeros(len(children))
@@ -261,13 +262,17 @@ class PUCT():
             _, action_probs = self._nn_model.predict(np.array([state.get_image_representation()]))
 
         root = PUCTTreeNode(None, state, -1, action_probs[0], 0, self._cpuct)
+        
+        closed_list = set()
+        closed_list.add(state)
 
         while True:
             nodes = []
             actions = []
+            children_states = []
             number_trials = 0
+            
             while len(nodes) == 0:
-                distinct_nodes = set()
 
                 for _ in range(self._k):
                     leaf_node, action = self._expand(root)
@@ -278,16 +283,20 @@ class PUCT():
                     if action is None:
                         number_trials += 1
                         continue
+                    
+                    child_state = leaf_node.get_game_state().copy()
+                    child_state.apply_action(action)
 
-                    if leaf_node.get_game_state() not in distinct_nodes:
-                        distinct_nodes.add(leaf_node.get_game_state())
+                    if child_state not in closed_list:
+                        closed_list.add(child_state)
 
                         nodes.append(leaf_node)
                         actions.append(action)
+                        children_states.append(child_state)
 
                         expanded += 1
 
-            leaves, values = self._evaluate(nodes, actions)
+            leaves, values = self._evaluate(nodes, actions, children_states)
 
             if expanded >= budget:
                 return False, None, expanded, 0, puzzle_name
@@ -355,25 +364,32 @@ class PUCT():
             _, action_probs = self._nn_model.predict(np.array([state.get_image_representation()]))
 
         root = PUCTTreeNode(None, state, -1, action_probs[0], 0, self._cpuct)
+        
+        closed_list = set()
+        closed_list.add(state)
 
         while True:
             nodes = []
             actions = []
+            children_states = []
 
             while len(nodes) == 0:
-                distinct_nodes = set()
 
                 for _ in range(self._k):
                     leaf_node, action = self._expand(root)
 
                     if action is None:
                         continue
+                    
+                    child_state = leaf_node.get_game_state().copy()
+                    child_state.apply_action(action)
 
-                    if leaf_node.get_game_state() not in distinct_nodes:
-                        distinct_nodes.add(leaf_node.get_game_state())
+                    if child_state not in closed_list:
+                        closed_list.add(child_state)
 
                         nodes.append(leaf_node)
                         actions.append(action)
+                        children_states.append(child_state)
 
                         expanded += 1
 
@@ -381,7 +397,7 @@ class PUCT():
                         if (budget > 0 and expanded > budget) or end_time - start_overall_time + slack_time > time_limit:
                                 return -1, expanded, 0, end_time - start_time, puzzle_name
 
-            leaves, values = self._evaluate(nodes, actions)
+            leaves, values = self._evaluate(nodes, actions, children_states)
 
             for leaf_node in leaves:
                 if leaf_node.get_game_state().is_solution():
