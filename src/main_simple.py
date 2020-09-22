@@ -8,6 +8,7 @@ from search.a_star import AStar
 from search.bfs_levin import BFSLevin
 #from search.gbfs import GBFS
 from search.puct import PUCT
+from search.puct_levi import PUCT as PUCT_Levi
 from domains.simple import SimpleEnv
 from models.simple import SimplePolicy
 
@@ -24,6 +25,8 @@ def main():
       planner = AStar(use_heuristic=False, use_learned_heuristic=False, k_expansions=32, weight=-1)
     elif(planner_str == 'puct'):
       planner = PUCT(use_heuristic=False, use_learned_heuristic=False, k_expansions=32, cpuct=1.0)
+    elif(planner_str == 'puct_levi'):
+      planner = PUCT_Levi(use_heuristic=False, use_learned_heuristic=False, k_expansions=32, cpuct=1.0)
     elif(planner_str == 'bflts'):
       planner = BFSLevin(use_heuristic=False, use_learned_heuristic=False, k_expansions=32, estimated_probability_to_go=False)
     else:
@@ -42,7 +45,7 @@ def main():
     model = SimplePolicy(branch=branch)
     budget = 100000 #1000
     start_time = time.time()
-    time_limit_seconds = 100
+    time_limit_seconds = 1000
 
     print("Searching...")
     data = {'state': state,
