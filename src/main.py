@@ -3,30 +3,28 @@ import time
 from os import listdir
 from os.path import isfile, join
 from domains.witness import WitnessState
-from search.bfs_levin import BFSLevin
 from models.model_wrapper import KerasManager, KerasModel
 from concurrent.futures.process import ProcessPoolExecutor
 import argparse
 from search.a_star import AStar
-from search.gbfs import GBFS
-from search.bfs_levin_mult import BFSLevinMult
+from search.bfs_levin import BFSLevin
+#from search.gbfs import GBFS
+from search.puct import PUCT
 from domains.sliding_tile_puzzle import SlidingTilePuzzle
 from domains.sokoban import Sokoban
-from search.puct import PUCT
 from bootstrap import Bootstrap
 from multiprocessing import set_start_method
+
     
-   
 def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-1):
-    """
-    This function runs (best-first) Levin tree search with a learned policy on a set of problems    
-    """          
     total_expanded = 0
     total_generated = 0
     total_cost = 0
     
     slack_time = 600
-    
+
+    print("ncpus {:d} time_limit_seconds {:d} search_budget {:d}".format(ncpus, time_limit_seconds, search_budget))
+
     solutions = {}
         
     for name, state in states.items():
@@ -34,112 +32,61 @@ def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-
         solutions[name] = (-1, -1, -1, -1)
     
     start_time = time.time()
-    
-    while len(states) > 0:
-    
-#         args = [(state, name, nn_model, search_budget, start_time, time_limit_seconds, slack_time) for name, state in states.items()]
-#         solution_depth, expanded, generated, running_time, puzzle_name = planner.search(args[0])
-      
-        with ProcessPoolExecutor(max_workers = ncpus) as executor:
-            args = ((state, name, nn_model, search_budget, start_time, time_limit_seconds, slack_time) for name, state in states.items()) 
-            results = executor.map(planner.search, args)
-        for result in results:
-            solution_depth = result[0]
-            expanded = result[1]
-            generated = result[2]
-            running_time = result[3]
-            puzzle_name = result[4]
-            
-            if solution_depth > 0:
-                solutions[puzzle_name] = (solution_depth, expanded, generated, running_time)
-                del states[puzzle_name]
-            
-            if solution_depth > 0:
-                total_expanded += expanded
-                total_generated += generated
-                total_cost += solution_depth
-        
-        partial_time = time.time()
-                
-        if partial_time - start_time + slack_time > time_limit_seconds or len(states) == 0 or search_budget >= 1000000:            
-            for name, data in solutions.items():
-                print("{:s}, {:d}, {:d}, {:d}, {:.2f}".format(name, data[0], data[1], data[2], data[3]))
-            return
-        
-        search_budget *= 2
 
-# def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
-#  
-#     log_folder = 'logs_large/'
-#     models_folder = 'trained_models_large/' + output
-#      
-#     if not os.path.exists(models_folder):
-#         os.makedirs(models_folder)
-#          
-#     if not os.path.exists(log_folder):
-#         os.makedirs(log_folder)
-#      
-#     number_problems = len(states)
-#      
-#     iteration = 1
-#     number_solved = 0
-#     total_expanded = 0
-#     total_generated = 0
-#      
-#     budget = initial_budget
-#     memory = Memory()
-#     start = time.time()
-#      
-#     current_solved_puzzles = set()
-#      
-#     while len(current_solved_puzzles) < number_problems:
-#         number_solved = 0
-#          
-#         with ProcessPoolExecutor(max_workers = ncpus) as executor:
-#             args = ((state, name, budget, nn_model) for name, state in states.items()) 
-#             results = executor.map(planner.search_for_learning, args)
-#         for result in results:
-#             has_found_solution = result[0]
-#             trajectory = result[1]
-#             total_expanded += result[2]
-#             total_generated += result[3]
-#             puzzle_name = result[4]
-#              
-#             if has_found_solution:
-#                 memory.add_trajectory(trajectory)
-#               
-#             if has_found_solution and puzzle_name not in current_solved_puzzles:
-#                 number_solved += 1
-#                 current_solved_puzzles.add(puzzle_name)
-#          
-#         end = time.time()
-#         with open(join(log_folder + 'training_bootstrap_' + output), 'a') as results_file:
-#             results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(iteration, 
-#                                                                              number_solved, 
-#                                                                              number_problems - len(current_solved_puzzles), 
-#                                                                              budget,
-#                                                                              total_expanded,
-#                                                                              total_generated, 
-#                                                                              end-start)))
-#             results_file.write('\n')
-#          
-#         print('Number solved: ', number_solved)
-#         if number_solved > 0:
-#             for _ in range(10):
-#                 loss = nn_model.train_with_memory(memory)
-#                 print(loss)
-# #             if number_solved < 20:
-# #                 budget *= 2
-#             memory.clear()
-#              
-#             nn_model.save_weights(join(models_folder, 'model_weights')) 
-#         else:
-#             budget *= 2
-#             print('Budget: ', budget)
-#             continue
-#                                  
-#         iteration += 1
+    # search_budget = 100 # FOR TESTING PURPOSES
+
+    # If the file puzzle_filter_file exists, it specifies the allow list
+    # of the problem names to try, and not try the others.
+    # If it doesn't exist, all problems are tried.
+    # TODO: make these prog args, not env vars
+    model_name = os.environ.get('model')    
+    puzzle_filter_file = os.environ.get('puzzle_filter_file')
+    print("puzzle_filter_file={}".format(puzzle_filter_file))
+    puzzle_filter = False
+    if os.path.isfile(puzzle_filter_file):
+        with open(puzzle_filter_file) as f:
+            puzzle_filter = f.read().splitlines()
+        
+    args = [{'state': state,
+             'puzzle_name': name,
+             'nn_model': nn_model,
+             'node_budget': search_budget,
+             # 'time_budget': -1, # time budget for the problem itself
+             'overall_time_budget': time_limit_seconds,
+             'overall_start_time': time.time(),
+             'slack_time': slack_time} for name, state in states.items()]
+    print( "(search_budget {} start_time {} time_limit_seconds {} slack_time {})".format(search_budget, start_time, time_limit_seconds, slack_time))
+
+    if puzzle_filter:
+        print("Only trying these puzzles: {}".format(puzzle_filter))
+        args = [a for a in args if a['puzzle_name'] in puzzle_filter]
+        
+    print("Filtered puzzles:") 
+    for a in args:
+        print(a['puzzle_name'])
+        
+    # exit() # useful to make sure most goes through without actually running anything
     
+    # args = args[1:5] # FOR TESTING PURPOSES
+    
+    while len(args) > 0:
+        new_args = []
+        for arg in args:
+            state = arg['state']
+            state.reset()
+            res = planner.search(arg)
+            if res['status'] == 'solved':
+                actions = res['trajectory'].get_actions()
+                print("actions = {}".format(actions))
+            print("{:s}\tsolution_depth\t{}\texpanded\t{}\tgenerated\t{}\trunning_time\t{}".format(
+                    res['puzzle_name'], res['solution_depth'], res['expanded'], res['generated'], res['time']),
+                flush=True)
+            if res['solution_depth'] == -1:
+                arg['node_budget'] *= 4 # search_budget
+                new_args.append(arg)
+        
+        args = new_args
+    print("Finished")
 
 def main():
     """
@@ -336,24 +283,6 @@ def main():
                 nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
                 
-        if parameters.search_algorithm == 'LevinMult':
-        
-            bfs_planner = BFSLevinMult(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
-        
-            if parameters.use_learned_heuristic:
-                nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     
-            else:
-                nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
-            
-            if parameters.learning_mode:
-#                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
-                bootstrap.solve_problems(bfs_planner, nn_model)            
-            elif parameters.blind_search:
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
-            else:
-                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
-                search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
-        
         if parameters.search_algorithm == 'AStar':
             bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions, float(parameters.weight_astar))
             
@@ -369,7 +298,9 @@ def main():
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))  
                 
         if parameters.search_algorithm == 'GBFS':
-            bfs_planner = GBFS(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
+            #bfs_planner = GBFS(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
+            # NEW: USE A* with w=-1 instead    
+            bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions, -1)
             
             if parameters.learning_mode:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)

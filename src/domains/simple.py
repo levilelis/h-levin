@@ -32,7 +32,7 @@ class SimpleEnv(Environment):
         return self.successors()
 
     def apply_action(self, action):
-        if printp: print("path = {} action = {}".format(self._path, action))
+        if self._printp: print("path = {} action = {}".format(self._path, action))
         self._path.append(action)
 
     def is_solution(self):

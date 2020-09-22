@@ -101,17 +101,26 @@ class GBS:
             idx += 1
             
         if idx > self._number_problems:
-            return True, None, None, None, None
+            return True, {'status': None}
 
         self._last_tried_instance[k] = idx
         
-        data = (self._problems[idx][1], self._problems[idx][0], budget, nn_model)
-        is_solved, trajectory, expanded, generated, _ = self._planner.search_for_learning(data)
+        data = {'state': self._problems[idx][1],
+                'puzzle_name': self._problems[idx][0],
+                'node_budget': budget,
+                'nn_model': nn_model}
+
+        res = self._planner.search(data)
+
+        has_found_solution = res['status'] == solved
+        trajectory = res['trajectory']
+        expanded = res['expanded']
+        generated = res['generated']
         
-        if is_solved:
+        if has_found_solution:
             self._has_solved[idx] = True
             
-        return idx == self._number_problems, is_solved, trajectory, expanded, generated
+        return idx == self._number_problems, res
         
         
     def solve(self, nn_model, max_steps):
@@ -156,9 +165,12 @@ class GBS:
                 continue
             
             
-#             data = (node.get_instance(), node.get_name(), node.get_budget(), nn_model)
-#             solved, trajectory, expanded, generated, _ = self._planner.search_for_learning(data)
-            has_halted, solved, trajectory, expanded, generated = self.run_prog(node.get_k(), node.get_budget(), nn_model)
+            #has_halted, solved, trajectory, expanded, generated = self.run_prog(node.get_k(), node.get_budget(), nn_model)
+            has_halted, result = self.run_prog(node.get_k(), node.get_budget(), nn_model)
+            solved = (result['status'] == 'solved')
+            expanded = result['expanded']
+            generated = result['generated']
+            trajectory = result['trajectory']
             
             # if not halted
             #if node.get_n() < self._number_problems:
@@ -411,16 +423,21 @@ class Bootstrap:
             if len(problems_to_solve) >= self._batch_size or len(open_list) == 0:
                 # invokes planning algorithm for solving the instance represented by node
                 with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
-                    args = ((p.get_instance(), p.get_n(), p.get_budget(), nn_model) for _, p in problems_to_solve.items()) 
-                    results = executor.map(planner.search_for_learning, args)
+                    # args = ((p.get_instance(), p.get_n(), p.get_budget(), nn_model) for _, p in problems_to_solve.items()) 
+                    #results = executor.map(planner.search_for_learning, args)
+                    args = ({'state': p.get_instance(),
+                             'puzzle_name': p.get_n(),
+                             'node_budget': p.get_budget(),
+                             'nn_model': nn_model} for _, p in problems_to_solve.items()) 
+                    results = executor.map(planner.search, args)
                     
                 # collect the results of search for the states
                 for result in results:
-                    solved = result[0]
-                    trajectory = result[1]
-                    total_expanded += result[2]
-                    total_generated += result[3]
-                    puzzle_id = result[4]
+                    has_found_solution = (result['status'] == 'solved')
+                    trajectory = result['trajectory']
+                    total_expanded += result['expanded']
+                    total_generated += result['generated']
+                    puzzle_id = result['puzzle_name']
             
                     # if not halted
                     if problems_to_solve[puzzle_id].get_n() < self._number_problems:
@@ -430,7 +447,7 @@ class Bootstrap:
                                             problems[puzzle_id + 1])
                         heapq.heappush(open_list, child)
                         
-                    if solved:
+                    if has_found_solution:
                         # if it has solved, then add the puzzle's name to the closed list
                         closed_list.add(puzzle_id)
                         # store the trajectory as training data
@@ -530,14 +547,20 @@ class Bootstrap:
                     continue
             
                 with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
-                    args = ((state, name, budget, nn_model) for name, state in batch_problems.items()) 
-                    results = executor.map(planner.search_for_learning, args)
+                    #args = ((state, name, budget, nn_model) for name, state in batch_problems.items()) 
+                    #results = executor.map(planner.search_for_learning, args)
+                    args = ({'state': state,
+                             'puzzle_name': name,
+                             'node_budget': budget,
+                             'nn_model': nn_model} for name, state in batch_problems.items()) 
+                    results = executor.map(planner.search, args)
+                
                 for result in results:
-                    has_found_solution = result[0]
-                    trajectory = result[1]
-                    total_expanded += result[2]
-                    total_generated += result[3]
-                    puzzle_name = result[4]
+                    has_found_solution = (result['status'] == 'solved')
+                    trajectory = result['trajectory']
+                    total_expanded += result['expanded']
+                    total_generated += result['generated']
+                    puzzle_name = result['puzzle_name']
                     
                     if has_found_solution:
                         memory.add_trajectory(trajectory)
@@ -590,14 +613,20 @@ class Bootstrap:
             number_solved = 0
             
             with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
-                args = ((state, name, budget, nn_model) for name, state in self._states.items()) 
-                results = executor.map(planner.search_for_learning, args)
+                #args = ((state, name, budget, nn_model) for name, state in self._states.items()) 
+                #results = executor.map(planner.search_for_learning, args)
+                args = ({'state': state,
+                         'puzzle_name': name,
+                         'node_budget': budget,
+                         'nn_model': nn_model} for name, state in self._states.items()) 
+                results = executor.map(planner.search, args)
+            
             for result in results:
-                has_found_solution = result[0]
-                trajectory = result[1]
-                total_expanded += result[2]
-                total_generated += result[3]
-                puzzle_name = result[4]
+                has_found_solution = (result['status'] == 'solved')
+                trajectory = result['trajectory']
+                total_expanded += result['expanded']
+                total_generated += result['generated']
+                puzzle_name = result['puzzle_name']
                 
                 if has_found_solution:
                     memory.add_trajectory(trajectory)
