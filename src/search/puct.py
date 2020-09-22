@@ -13,11 +13,8 @@ class PUCTTreeNode:
     def __init__(self, parent, game_state, action, action_probs, g_cost, cpuct=1.0):
         self.c = cpuct
         self._game_state = game_state
-        self._action = action
-        self._parent = parent
-        self._g = g_cost
-
         self._actions = game_state.successors()
+        
         self._N = {}
         self._W = {}
         self._Q = {}
@@ -26,23 +23,87 @@ class PUCTTreeNode:
         self._num_children_expanded = 0
 
         self._is_fully_expanded = False
-
         self._N_total = 0
-
+        
         for a in self._actions:
             self._N[a] = 0
             self._W[a] = 0
             self._Q[a] = None
             self._children[a] = None
             self._P[a] = action_probs[a]
-
+            
+    def __eq__(self, other):
+        """
+        Verify if two tree nodes are identical by verifying the
+        game state in the nodes.
+        """
+        return self._game_state == other._game_state
+    
+    def __hash__(self):
+        """
+        Hash function used in the closed list
+        """
+        return self._game_state.__hash__()
+    
     def update_action_value(self, action, value):
         self._N_total += 1
         self._N[action] += 1
 
         self._W[action] += value
         self._Q[action] = self._W[action] / self._N[action]
+        
+    def remove_virtual_loss(self, action):
+        self._virtual_loss[action] = 0
+        
+    def get_actions(self):
+        return self._actions
+    
+    def get_virtual_loss(self, action):
+        return self._virtual_loss[action]
+    
+    def get_probability_value(self, action):
+        return self._P[action]
+    
+    def get_n_total(self):
+        return self._N_total
+    
+    def get_n(self, action):
+        return self._N[action]
+    
+    def add_virtual_loss(self, action, max_q):
+        self._virtual_loss[action] += max_q
+        
+    def get_game_state(self):
+        return self._game_state
+    
+    def get_q_values(self):
+        return self._Q
+    
+        
 
+class PUCTTreeNode:
+    def __init__(self, parent, puct_state, action, g_cost, cpuct=1.0):
+        self.c = cpuct
+        self._puct_state = puct_state
+        self._action = action
+        self._parent = parent
+        self._g = g_cost
+
+        self._children = {}
+        self._N = {}
+        self._num_children_expanded = 0
+
+        self._is_fully_expanded = False
+
+        actions = self._puct_state.get_actions()
+        for a in actions:
+            self._children[a] = None
+            self._N[a] = 0
+
+    def update_action_value(self, action, value):
+        self._N[action] += 1
+        self._puct_state.update_action_value(action, value)
+        
     def is_root(self):
         return self._parent is None
 
@@ -60,8 +121,9 @@ class PUCTTreeNode:
             normalized_Q[a] = (q - min_q) / (max_q - min_q)
 
         uct_values = {}
-        for a in self._actions:
-            uct_values[a] = normalized_Q[a] - self.c * self._P[a] * (np.math.sqrt(self._N_total)/(1 + self._N[a]))
+        actions = self._puct_state.get_actions()
+        for a in actions:
+            uct_values[a] = normalized_Q[a] - self.c * self._puct_state.get_probability_value(a) * (np.math.sqrt(self._puct_state.get_n_total())/(1 + self._puct_state.get_n(a)))
 
         return uct_values
 
@@ -90,7 +152,7 @@ class PUCTTreeNode:
 
         self._num_children_expanded += 1
 
-        if self._num_children_expanded == len(self._actions):
+        if self._num_children_expanded == len(self._puct_state.get_actions()):
             self._is_fully_expanded = True
 
     def get_g(self):
@@ -110,7 +172,7 @@ class PUCTTreeNode:
         """
         Returns the game state represented by the node
         """
-        return self._game_state
+        return self._puct_state.get_game_state()
 
     def get_parent(self):
         """
@@ -138,6 +200,8 @@ class PUCT():
         self._use_learned_heuristic = use_learned_heuristic
         self._k = k_expansions
         self._cpuct = cpuct
+        
+        self._states_list = {} 
 
         self._max_q = None
         self._min_q = None
@@ -212,7 +276,6 @@ class PUCT():
         while not node.is_root():
             parent = node.get_parent()
             parent.update_action_value(node.get_action(), value)
-
             node = parent
 
     def _store_trajectory_memory(self, tree_node, expanded):
@@ -271,7 +334,9 @@ class PUCT():
         else:
             _, action_probs = nn_model.predict(np.array([state.get_image_representation()]))
 
-        root = PUCTTreeNode(None, state, -1, action_probs[0], 0, self._cpuct)
+        root_state = PUCTState(state, action_probs[0])
+        self._states_list[state] = root_state
+        root = PUCTTreeNode(None, root_state, -1, 0, self._cpuct)
 
         closed_list = set()
         closed_list.add(state)
@@ -372,3 +437,4 @@ class PUCT():
                 for node_action in path:
                     node, action = node_action
                     node.update_action_value(action, child_value)
+
