@@ -257,23 +257,20 @@ class PUCT():
   
             children.append(child_state)
             children_image.append(child_state.get_image_representation())
-#             children_image.append(children[i].get_image_representation())
 
 
         predicted_h = np.zeros(len(children))
         if self._use_learned_heuristic:
             _, action_probs, predicted_h = self._nn_model.predict(np.array(children_image))
         else:
-#             print(np.array(children_image).shape)
             _, action_probs = self._nn_model.predict(np.array(children_image))
 
         child_nodes = []
         child_values = []
 
         for i in range(len(children)):
-            if children[i] in self._states_list:
-                child_state = self._states_list[children[i]]
-            else:
+            child_state = self._states_list.get(children[i], None)
+            if child_state is None:
                 child_state = PUCTState(children[i], action_probs[i])
                 self._states_list[children[i]] = child_state 
             
@@ -304,71 +301,6 @@ class PUCT():
                 parent.remove_virtual_loss(node.get_action())
 
                 node = parent
-
-    def search_for_learning_UNUSED(self, data):
-        """
-        Performs PUCT search bounded by a search budget.
-
-        Returns Boolean indicating whether the solution was found,
-        number of nodes expanded, and number of nodes generated
-        """
-        state = data[0]
-        puzzle_name = data[1]
-        budget = data[2]
-        self._nn_model = data[3]
-
-        expanded = 0
-
-        if self._use_learned_heuristic:
-            _, action_probs, _ = self._nn_model.predict(np.array([state.get_image_representation()]))
-        else:
-            _, action_probs = self._nn_model.predict(np.array([state.get_image_representation()]))
-
-        root_state = PUCTState(state, action_probs[0])
-        self._states_list[state] = root_state
-        root = PUCTTreeNode(None, root_state, -1, 0, self._cpuct)
-        
-        while True:
-            nodes = []
-            actions = []
-            number_trials = 0
-            
-            while len(nodes) == 0:
-                
-                distinct_nodes = set()
-
-                for _ in range(self._k):
-                    leaf_node, action = self._expand(root)
-    
-                    if number_trials % 100 == 0 and number_trials != 0:
-                        print(number_trials)
-    
-                    if action is None:
-                        number_trials += 1
-                        continue
-                    
-                    if leaf_node.get_game_state() in distinct_nodes:
-                        continue
-                    distinct_nodes.add(leaf_node.get_game_state())    
-    
-                    nodes.append(leaf_node)
-                    actions.append(action)
-
-                    expanded += 1
-
-            leaves, values = self._evaluate(nodes, actions)
-            
-            for leaf in leaves:
-                if leaf.get_game_state().is_solution():
-                    print('Solved puzzle: ', puzzle_name)
-                    trajectory = self._store_trajectory_memory(leaf_node, expanded)
-                    return True, trajectory, expanded, 0, puzzle_name
-
-            if expanded >= budget:
-                return False, None, expanded, 0, puzzle_name
-
-            self._backpropagate(leaves, values)
-
 
     def _store_trajectory_memory(self, tree_node, expanded):
         """
@@ -417,14 +349,6 @@ class PUCT():
 
         self._nn_model = nn_model
 
-        #state = data[0]
-        #puzzle_name = data[1]
-        #self._nn_model = data[2]
-        #budget = data[3]
-        #start_overall_time = data[4]
-        #time_limit = data[5]
-        #slack_time = data[6]
-
         expanded = 0
 
         start_time = time.time()
@@ -462,9 +386,6 @@ class PUCT():
                         continue
                     
                     leaf_state = leaf_node.get_game_state()
-                    if leaf_state.is_solution():
-                        trajectory = self._store_trajectory_memory(leaf_node, expanded)
-                        return make_return_dict('solved', trajectory)
                     if leaf_state in distinct_nodes:
                         continue
                     distinct_nodes.add(leaf_state)

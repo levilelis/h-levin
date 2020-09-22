@@ -10,6 +10,7 @@ from search.a_star import AStar
 from search.bfs_levin import BFSLevin
 #from search.gbfs import GBFS
 from search.puct import PUCT
+from search.puct_levi import PUCT as PUCT_Levi
 from domains.sliding_tile_puzzle import SlidingTilePuzzle
 from domains.sokoban import Sokoban
 from bootstrap import Bootstrap
@@ -244,9 +245,13 @@ def main():
                                   initial_budget=int(parameters.search_budget),
                                   gradient_steps=int(parameters.gradient_steps))
         
+        PUCT_constructor = PUCT
+        if parameters.search_algorithm == 'PUCT_Levi':
+            PUCT_constructor = PUCT_Levi
+            parameters.search_algorithm = 'PUCT'
         if parameters.search_algorithm == 'PUCT':
        
-            bfs_planner = PUCT(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions, float(parameters.cpuct))
+            bfs_planner = PUCT_constructor(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions, float(parameters.cpuct))
         
             if parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)     
