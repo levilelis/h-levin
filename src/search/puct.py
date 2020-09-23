@@ -6,7 +6,7 @@ import time
 ### A custom implementation of PUCT
 ### Note that DeepMind's PUCT implementation currently does not feature 
 ### state duplication checks and merging as we do, hence this is already
-### an improvement over the literature (AFAWCT)
+### an improvement over the literature (AFAWCT).
 
 
 class PUCTTreeNode:
