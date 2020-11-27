@@ -225,7 +225,6 @@ class Bootstrap:
         
         self._scheduler = scheduler
         
-<<<<<<< HEAD
         self._log_folder = 'logs_large/'
         self._models_folder = 'trained_models_large/' + self._model_name
         self._curriculum_folder = 'curriculum/' + self._model_name + "/"
@@ -239,11 +238,6 @@ class Bootstrap:
         if not os.path.exists (self._trajectory_folder):
             os.makedirs (self._trajectory_folder)
 
-=======
-        self._log_folder = 'training_logs/'
-        self._models_folder = 'trained_models_online/' + self._model_name
-        
->>>>>>> 79936453b9a6a4322810fc3be831eb142f2ab17b
         if not os.path.exists(self._models_folder):
             os.makedirs(self._models_folder)
             
@@ -546,7 +540,6 @@ class Bootstrap:
         start = time.time()
         
         current_solved_puzzles = set()
-<<<<<<< HEAD
         last_puzzle = list(self._states)[-1]  # self._states is a dictionary of puzzle_file_name, puzzle
 
         # TODO: only save a curriculum if you solved all puzzles
@@ -555,14 +548,10 @@ class Bootstrap:
         # if you did not solve any puzzles with current budget, then double the budget
         d = {}
         d[budget] = 1
-=======
-                
->>>>>>> 79936453b9a6a4322810fc3be831eb142f2ab17b
         while len(current_solved_puzzles) < self._number_problems:
             at_least_one_got_solved = False
             number_solved = 0
             batch_problems = {}
-<<<<<<< HEAD
 
             # loop-invariant: on each loop iteration, we process self._batch_size puzzles that we solve
             # with current budget and train the NN on solved instances self._gradient_descent_steps times
@@ -581,18 +570,6 @@ class Bootstrap:
                     continue   # we only proceed if the number of elements in batch_problems == self._batch_size
 
                 # once we have self._batch_size puzzles in batch_problems, we look for their solutions and train NN
-=======
-            for name, state in self._states.items():
-                
-#                 if name in current_solved_puzzles:
-#                     continue
-                
-                batch_problems[name] = state
-                
-                if len(batch_problems) < self._batch_size and self._number_problems - len(current_solved_puzzles) > self._batch_size:
-                    continue
-            
->>>>>>> 79936453b9a6a4322810fc3be831eb142f2ab17b
                 with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
                     args = ((state, name, budget, nn_model) for name, state in batch_problems.items()) 
                     results = executor.map(planner.search_for_learning, args)

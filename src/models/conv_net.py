@@ -142,6 +142,7 @@ class TwoHeadedConvNet(tf.keras.Model):
         return log_softmax.numpy(), x_softmax.numpy(), pred_h.numpy()
         
     def call(self, input_tensor):
+        
         x = self.conv1(input_tensor)
 #         x = self.pool1(x)
         x = self.conv2(x)
@@ -157,24 +158,9 @@ class TwoHeadedConvNet(tf.keras.Model):
         
         return x_log_softmax, x_softmax, logits_pi, logits_h
     
-    def train_with_memory(self, memory):        
+    def train_with_memory(self, memory):
         losses = []
         memory.shuffle_trajectories()
-        
-#         total_parameters = 0
-#         for variable in self.trainable_variables:
-#             # shape is an array of tf.Dimension
-#             shape = variable.get_shape()
-#             print('Shape: ', shape)
-# #             print(len(shape))
-#             variable_parameters = 1
-#             for dim in shape:
-#                 print('Dim: ', dim)
-#                 variable_parameters *= dim
-#             print(variable_parameters)
-#             total_parameters += variable_parameters
-#         print('Total parameters: ', total_parameters)
-        
         for trajectory in memory.next_trajectory():
             
             with tf.GradientTape() as tape:
