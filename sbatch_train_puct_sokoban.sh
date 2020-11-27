@@ -4,7 +4,7 @@ output="output_train_sokoban/"
 domain_name="10x10-sokoban-"
 algorithm="PUCT"
 declare -a losses=("CrossEntropyLoss")
-constants=("1.0" "1.5" "2.0") 
+constants=("1.5") 
 heuristic_scheme=("--learned-heuristic")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 
@@ -24,7 +24,7 @@ for iter in {1..1}; do
 				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}"
 				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}
 		
-				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_puct_sokoban.sh
+				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_sokoban.sh
 			done
 		done
 	done

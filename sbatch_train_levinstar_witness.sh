@@ -3,14 +3,14 @@
 #declare -a losses=("ImprovedLevinLoss")
 declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_train_witness/"
-domain_name="4x4-witness50k-"
+domain_name="4x4-witness-"
 algorithm="LevinStar"
 
 scheduler="online"
 heuristic_scheme=("--learned-heuristic")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 
-for iter in {2..5}; do
+for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for loss in ${losses[@]}; do
 			lower_loss=$(echo ${loss} | tr "A-Z" "a-z")

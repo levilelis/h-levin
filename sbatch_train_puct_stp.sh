@@ -1,15 +1,15 @@
 #!/bin/bash
 
-output="output_train_stp/"
-domain_name="5x5-stp-"
-algorithm="PUCT"
 declare -a losses=("CrossEntropyLoss")
-constants=("1.0" "1.5" "2.0") 
+output="output_train_stp/"
+domain_name="4x4-stp-"
+
 heuristic_scheme=("--learned-heuristic")
+#heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
+constants=("1.0" "1.5" "2.0") 
+algorithm="PUCT"
 
-scheduler="online" 
-
-for iter in {1..5}; do
+for iter in {2..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for c in "${constants[@]}"; do
 			for loss in ${losses[@]}; do
@@ -20,10 +20,10 @@ for iter in {1..5}; do
 				name_scheme=${name_scheme//--/-}
 				c_name=${c//./}
 				name_scheme=${name_scheme//--/-}
-				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}"
-				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}
-		
-				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_puct_stp.sh
+				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-c${c_name}-v${iter}"
+				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-c${c_name}-v${iter}
+	
+				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train_puct_stp.sh
 			done
 		done
 	done
