@@ -71,19 +71,21 @@ class AStarTreeNode:
 
 class AStar():
     
-    def __init__(self, use_heuristic=True, use_learned_heuristic=False, k_expansions=32):
+    def __init__(self, use_heuristic=True, use_learned_heuristic=False, k_expansions=32, weight=1.0):
         self._use_heuristic = use_heuristic
         self._use_learned_heuristic = use_learned_heuristic
-        
+        self._w = weight
         self._k = k_expansions
+        
+        print('Weight used: ', self._w)
     
     def get_f_cost(self, child, g, predicted_h):       
         if self._use_learned_heuristic and self._use_heuristic:
-            return max(predicted_h, child.heuristic_value()) + g 
+            return self._w * max(predicted_h, child.heuristic_value()) + g 
         if self._use_learned_heuristic:
-            return predicted_h + g
+            return self._w * predicted_h + g
         elif self._use_heuristic:
-            return child.heuristic_value() + g
+            return self._w * child.heuristic_value() + g
         return g
     
     def search(self, data):
@@ -251,6 +253,7 @@ class AStar():
                     f_cost = self.get_f_cost(children_to_be_evaluated[i].get_game_state(), 
                                             children_to_be_evaluated[i].get_g(),
                                             predicted_h[i])
+                    
                     children_to_be_evaluated[i].set_f_cost(f_cost)
                                     
                     if children_to_be_evaluated[i].get_game_state() not in _closed:
