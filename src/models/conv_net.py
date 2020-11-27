@@ -246,8 +246,25 @@ class ConvNet(tf.keras.Model):
         images = [s.get_image_representation() for s in states]
         _, _, logits = self(np.array(images))
         return self.cross_entropy_loss(y, logits)
+
+    def get_gradients_from_batch (self, batch_training_data, batch_actions):
+        with tf.GradientTape () as tape:
+            tape.watch (self.trainable_variables)
+            x = self.conv1 (batch_training_data)
+            x = self.conv2 (x)
+            x = self.flatten (x)
+            x = self.dense1 (x)
+            preds = self.dense2 (x)
+            # labels = self.get_label (batch_actions)
+            loss = self._loss_function.cross_entropy_loss(batch_actions, preds)
+            print("loss", loss)
+        grads = tape.gradient (loss, self.trainable_variables)
+        last_grads = grads[-1].numpy ()
+        loss_val = loss.numpy ()
+        return last_grads, loss_val, grads
     
     def train_with_memory(self, memory):
+        print("inside convnet train_with_memory")
         losses = []
         memory.shuffle_trajectories()
         for trajectory in memory.next_trajectory():

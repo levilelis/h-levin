@@ -6,7 +6,7 @@ output="output_train_sokoban/"
 domain_name="10x10-sokoban-"
 algorithm="LevinStar"
 
-scheduler="pgbs"
+scheduler="online"
 heuristic_scheme=("--learned-heuristic")
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic")
 

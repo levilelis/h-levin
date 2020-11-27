@@ -13,15 +13,17 @@ scheduler="online"
 
 for iter in {1..1}; do
 	for scheme in "${heuristic_scheme[@]}"; do
-		lower_algorithm=$(echo ${algorithm} | tr "A-Z" "a-z")
-		name_scheme=${scheme// /}
-		name_scheme=${name_scheme//-heuristic/}
-		name_scheme=${name_scheme//--/-}
-		output_exp="${output}${lower_algorithm}${name_scheme}-${scheduler}-v${iter}"
-		model=${domain_name}${lower_algorithm}-${name_scheme}-${scheduler}-v${iter}
-		
-		#echo ${output_exp}
-		#echo ${model}	
-		sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${problems_dir} run_bootstrap_test_sokoban.sh
+		for weight in 1.0 1.5 2.0 2.5; do
+			lower_algorithm=$(echo ${algorithm} | tr "A-Z" "a-z")
+			name_scheme=${scheme// /}
+			name_scheme=${name_scheme//-heuristic/}
+			name_scheme=${name_scheme//--/}
+			output_exp="${output}${lower_algorithm}-${name_scheme}-${scheduler}-w${weight//./}-v${iter}"
+			model=${domain_name}${lower_algorithm}-${name_scheme}-${scheduler}-w${weight//./}-v${iter}
+			
+			#echo ${output_exp}
+			#echo ${model}	
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${problems_dir},weight=${weight} run_bootstrap_test_astar_sokoban.sh
+		done
 	done
 done

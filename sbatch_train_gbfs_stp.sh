@@ -1,22 +1,26 @@
 #!/bin/bash
 
-declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_train_stp/"
-domain_name="4x4-stp-"
-
-heuristic_scheme=("--learned-heuristic --default-heuristic" "--learned-heuristic") 
+domain_name="5x5-stp-"
 algorithm="GBFS"
+loss="MSELoss"
+heuristic_scheme=("--learned-heuristic --default-heuristic")
 
-for iter in {3..5}; do
+scheduler="online"
+
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
-		lower_loss=$(echo ${loss} | tr "A-Z" "a-z")
 		lower_algorithm=$(echo ${algorithm} | tr "A-Z" "a-z")
 		name_scheme=${scheme// /}
 		name_scheme=${name_scheme//-heuristic/}
-		name_scheme=${name_scheme//--/-}
-		output_exp="${output}${lower_algorithm}${name_scheme}-v${iter}"
-		model=${domain_name}${lower_algorithm}${name_scheme}-v${iter}
+		name_scheme=${name_scheme//--/}
 
-		sbatch --output=${output_exp} --export=scheme="${scheme}",loss=mseloss,algorithm=${algorithm},model=${model} run_bootstrap_train.sh
+		output_exp="${output}${lower_algorithm}-${name_scheme}-${scheduler}-v${iter}"
+		model=${domain_name}${lower_algorithm}-${name_scheme}-${scheduler}-v${iter}
+
+		#echo ${output_exp}
+		#echo ${model}
+
+		sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_stp.sh
 	done
 done
