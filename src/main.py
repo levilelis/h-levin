@@ -14,7 +14,44 @@ from domains.sliding_tile_puzzle import SlidingTilePuzzle
 from domains.sokoban import Sokoban
 from search.puct import PUCT
 from bootstrap import Bootstrap
-from multiprocessing import set_start_method
+
+
+def search_time_limit(states, planner, nn_model, ncpus, time_limit_seconds):
+    """
+    This function runs (best-first) Levin tree search with a learned policy on a set of problems.
+    The search will be bounded by a time limit. The number of nodes expanded and generated will be
+    reported, independently if the planner solved the problem or not. If the planner solves the 
+    problem, then the procedure also reports solution depth.     
+    """          
+    total_expanded = 0
+    total_generated = 0
+    total_cost = 0
+    
+    solutions = {}
+        
+    for name, state in states.items():
+        state.reset()
+        solutions[name] = (-1, -1, -1, -1)
+    
+    with ProcessPoolExecutor(max_workers = ncpus) as executor:
+        args = ((state, name, nn_model, -1, time.time(), time_limit_seconds, 0) for name, state in states.items()) 
+        results = executor.map(planner.search, args)
+    for result in results:
+        solution_depth = result[0]
+        expanded = result[1]
+        generated = result[2]
+        running_time = result[3]
+        puzzle_name = result[4]
+        
+        solutions[puzzle_name] = (solution_depth, expanded, generated, running_time)
+        
+        if solution_depth > 0:
+            total_expanded += expanded
+            total_generated += generated
+            total_cost += solution_depth
+                           
+    for name, data in solutions.items():
+        print("{:s}, {:d}, {:d}, {:d}, {:.2f}".format(name, data[0], data[1], data[2], data[3]))
     
    
 def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-1):
@@ -207,6 +244,10 @@ def main():
                         dest='learning_mode',
                         help='Train as neural model out of the instances from the problem folder')
     
+    parser.add_argument('--fixed-time', action='store_true', default=False,
+                        dest='fixed_time',
+                        help='Run the planner for a fixed amount of time (specified by time_limit) for each problem instance')
+    
     parameters = parser.parse_args()
     
     states = {}
@@ -275,9 +316,7 @@ def main():
     
     print('Loaded ', len(states), ' instances')
 #     input_size = s.get_image_representation().shape
-
-#     set_start_method('forkserver', force=True)
-            
+           
     KerasManager.register('KerasModel', KerasModel)
     ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 1))
     
@@ -311,6 +350,9 @@ def main():
                 bootstrap.solve_problems(bfs_planner, nn_model)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
+            elif parameters.fixed_time:
+                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
+                search_time_limit(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit))
             else:
                 nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
@@ -332,6 +374,9 @@ def main():
                 bootstrap.solve_problems(bfs_planner, nn_model)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
+            elif parameters.fixed_time:
+                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
+                search_time_limit(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit))
             else:
                 nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))

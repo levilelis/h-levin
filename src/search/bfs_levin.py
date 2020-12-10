@@ -124,6 +124,8 @@ class BFSLevin():
         time_limit = data[5]
         slack_time = data[6]
 
+        if slack_time == 0:
+            start_overall_time = time.time()
         start_time = time.time()
 
         _open = []
