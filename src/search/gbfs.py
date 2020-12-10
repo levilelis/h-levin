@@ -212,6 +212,7 @@ class GBFS():
         
         while len(_open) > 0:
             node = heapq.heappop(_open)
+            print(node._h)
             
             expanded += 1
             
@@ -243,6 +244,7 @@ class GBFS():
             
                     h_cost = self.get_h_cost(children_to_be_evaluated[i].get_game_state(), 
                                             predicted_h[i])
+                    
                     children_to_be_evaluated[i].set_h_cost(h_cost)
                                     
                     if children_to_be_evaluated[i].get_game_state() not in _closed:
