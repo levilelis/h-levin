@@ -237,20 +237,8 @@ class BFSLevin():
         actions.append(action)
         solution_costs.append(cost)
 
-<<<<<<< HEAD
-        # # for debug
-        # print("states", states)
-        # print("actions", actions)
-        # print("solution_costs", solution_costs)
-        # assert False
-        # # for debug
-        
-        return Trajectory(states, actions, solution_costs, expanded, math.exp(tree_node.get_p()))        
-     
-=======
         return Trajectory(states, actions, solution_costs, expanded, math.exp(tree_node.get_p()))
 
->>>>>>> 79936453b9a6a4322810fc3be831eb142f2ab17b
     def search_for_learning(self, data):
         """
         Performs Best-First LTS bounded by a search budget.
@@ -312,7 +300,7 @@ class BFSLevin():
 
                 if child.is_solution():
                     print('Solved puzzle: ', puzzle_name, ' expanding ', expanded, ' with budget: ', budget)
-                    trajectory = self._store_trajectory_memory(child_node, expanded)  # a trajectory object
+                    trajectory = self._store_trajectory_memory(child_node, expanded)
                     return True, trajectory, expanded, generated, puzzle_name
 
                 children_to_be_evaluated.append(child_node)
