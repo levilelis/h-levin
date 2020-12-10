@@ -1,10 +1,14 @@
 import os
 import time
 from os.path import join
-from models.memory import Memory
+from models.memory import Memory, MemoryV2
 from concurrent.futures.process import ProcessPoolExecutor
 import heapq
 import math
+import numpy as np
+
+from compute_cosines import store_or_retrieve_batch_data_solved_puzzles, check_if_data_saved, \
+    retrieve_all_batch_images_actions, compute_and_save_cosines
 
 class ProblemNode:
     def __init__(self, k, n, name, instance):
@@ -223,14 +227,28 @@ class Bootstrap:
         
         self._log_folder = 'logs_large/'
         self._models_folder = 'trained_models_large/' + self._model_name
-        
+        self._curriculum_folder = 'curriculum/' + self._model_name + "/"
+
+
+        self._all_puzzle_names = set (states.keys ()) ## FD what do we use this for?
+        self._puzzle_dims = self._model_name.split ('-')[0] # self._model_name has the form '<puzzle dimension>-<problem domain>-<loss name>'
+
+        self._trajectory_folder = os.path.abspath (os.getcwd () + '/solved_puzzles/')
+        # print("self._trajectory_folder", self._trajectory_folder)
+        if not os.path.exists (self._trajectory_folder):
+            os.makedirs (self._trajectory_folder)
+
         if not os.path.exists(self._models_folder):
             os.makedirs(self._models_folder)
             
         if not os.path.exists(self._log_folder):
             os.makedirs(self._log_folder)
-    
-    
+
+        if not os.path.exists(self._curriculum_folder):
+            os.makedirs(self._curriculum_folder, exist_ok=True)
+        print(os.path.abspath (self._curriculum_folder))
+
+
     def map_function(self, data):
         gbs = data[0]
         nn_model = data[1]
@@ -504,6 +522,13 @@ class Bootstrap:
                 results_file.write('\n')
             
     def _solve_uniform_online(self, planner, nn_model):
+        # tODO: assumption: the solution of each puzzle is unique -- therefore, each time we train the NN and then solve the puzzles again,
+        # we will not need to recompute the solution trajectories after each trainign of theta
+
+        # step 1: check if we have already stored the solution trajectories and images of all the puzzles
+        already_saved_data = check_if_data_saved(self._puzzle_dims)
+        print("already_saved_data", already_saved_data)
+
         iteration = 1
         number_solved = 0
         total_expanded = 0
@@ -511,48 +536,80 @@ class Bootstrap:
         
         budget = self._initial_budget
         memory = Memory()
+        memory_v2 = MemoryV2(self._trajectory_folder, self._puzzle_dims)  # added by FD
         start = time.time()
         
         current_solved_puzzles = set()
-        last_puzzle = list(self._states)[-1]
-                
+        last_puzzle = list(self._states)[-1]  # self._states is a dictionary of puzzle_file_name, puzzle
+
+        # TODO: only save a curriculum if you solved all puzzles
+        curriculum = []
+
+        # if you did not solve any puzzles with current budget, then double the budget
+        d = {}
+        d[budget] = 1
         while len(current_solved_puzzles) < self._number_problems:
+            at_least_one_got_solved = False
             number_solved = 0
-            
             batch_problems = {}
-            for name, state in self._states.items():
-                
+
+            # loop-invariant: on each loop iteration, we process self._batch_size puzzles that we solve
+            # with current budget and train the NN on solved instances self._gradient_descent_steps times
+            # (on the batch of solved puzzles)
+            # before the for-loop starts, batch_problems = {}, number_solved = 0, at_least_one_got_solved = False
+
+            solved_batch = []
+            for name, state in self._states.items():  # iterate through all the puzzles, try to solve however many you have with a current budget
+                # at the start of each for loop, batch_problems is either empty, or it contains exactly self._batch_size puzzles
+                # number_solved is either 0 or = the number of puzzles solved with the current budget
+                # at_least_one_got_solved is either still False (no puzzle got solved with current budget) or is True
+                # memory has either 0 solution trajectories or at least one solution trajectory
                 batch_problems[name] = state
-                
+
                 if len(batch_problems) < self._batch_size and last_puzzle != name:
-                    continue
-            
+                    continue   # we only proceed if the number of elements in batch_problems == self._batch_size
+
+                # once we have self._batch_size puzzles in batch_problems, we look for their solutions and train NN
                 with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
                     args = ((state, name, budget, nn_model) for name, state in batch_problems.items()) 
                     results = executor.map(planner.search_for_learning, args)
                 for result in results:
                     has_found_solution = result[0]
-                    trajectory = result[1]
-                    total_expanded += result[2]
-                    total_generated += result[3]
+                    trajectory = result[1]    # the solution trajectory
+                    total_expanded += result[2]  # ??
+                    total_generated += result[3]  # ??
                     puzzle_name = result[4]
                     
                     if has_found_solution:
-                        memory.add_trajectory(trajectory)
-                     
+                        memory.add_trajectory(trajectory)  # stores trajectory object into a list (the list contains instances of the Trajectory class)
+                        memory_v2.add_trajectory (trajectory, puzzle_name)
+
                     if has_found_solution and puzzle_name not in current_solved_puzzles:
                         number_solved += 1
                         current_solved_puzzles.add(puzzle_name)
-                        
-                if memory.number_trajectories() > 0:
-                    for _ in range(self._gradient_steps):
+                        at_least_one_got_solved = True
+                        solved_batch += [puzzle_name]
+
+                # FD: once you have added everything to memory, train:
+                if memory.number_trajectories() > 0:  # if you have solved at least one puzzle with given budget, then:
+                    # before the for loop starts, memory has at least 1 solution trajectory and we have not yet trained the NN with
+                    # any of the puzzles solved with current budget and stored in memory
+                    for _ in range(self._gradient_steps): # train the NN g times
                         loss = nn_model.train_with_memory(memory)
-                        print('Loss: ', loss)
-                    memory.clear()
+                        # print('Loss: ', loss)
+                    memory.clear()    # clear memory
                     nn_model.save_weights(join(self._models_folder, 'model_weights'))
-                
-                batch_problems.clear() 
-            
+                    # after the for loop ends, memory is empty and mot recent weights are saved
+
+                batch_problems.clear()
+                # at the end of the bigger for loop, batch_problems == {}
+                # either we solved at least one puzzle with current budget, or 0 puzzles with current budget.
+                # if we did solve at east one of the self._batch_size puzzles puzzles in the batch, then we train the NN
+                # self._gradient_steps times with however many puzzles solved
+                print("")
+
+            print("outside of for loop inside of while loop")
+
             end = time.time()
             with open(join(self._log_folder + 'training_bootstrap_' + self._model_name), 'a') as results_file:
                 results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(iteration, 
@@ -563,14 +620,77 @@ class Bootstrap:
                                                                                  total_generated, 
                                                                                  end-start)))
                 results_file.write('\n')
-            
+
+            # TODO: save the curriculum even when you are not done solving all puzzles
+            # curriculum_filename = 'curriculum_budget_' + str(budget) + "_while_loop_iter_" + str(d[budget])
+            # curriculum_filename = join(self._curriculum_folder + curriculum_filename)
+            # print("curriculum filename", curriculum_filename)
+            # np.save(curriculum_filename, curriculum)
+            if number_solved > 0:
+                curriculum.append(solved_batch)
+                print("solved_batch", solved_batch)
+                if not already_saved_data:
+                    print("not already_saved_data, we store the data")
+                    store_or_retrieve_batch_data_solved_puzzles(solved_batch, memory_v2, self._puzzle_dims, True)
+                else:
+                    dict_batch_images_and_actions = store_or_retrieve_batch_data_solved_puzzles (solved_batch,
+                                                                                                 memory_v2,
+                                                                                                 self._puzzle_dims,
+                                                                                                 False)
+                    print("passed store_or_retrieve_batch_data_solved_puzzles", len(dict_batch_images_and_actions))
+                    batch_images_all, batch_actions_all, _, _ = retrieve_all_batch_images_actions(
+                        dict_batch_images_and_actions, None, "all_of_S")
+                    print("passed retrieve_all_batch_images_actions on S")
+                    _, _, batch_images_P, batch_actions_P = retrieve_all_batch_images_actions (
+                        dict_batch_images_and_actions, solved_batch, "P_new")
+                    print ("passed retrieve_all_batch_images_actions on P")
+                    batch_images_all_minus_P, batch_actions_all_minus_P, batch_images_P, batch_actions_P = \
+                        retrieve_all_batch_images_actions (dict_batch_images_and_actions, solved_batch, "S_minus_P")
+                    print ("passed retrieve_all_batch_images_actions on S\P")
+
+                    compute_and_save_cosines(batch_images_all, batch_actions_all, batch_images_P, batch_actions_P,
+                                             "cos_S_P", iteration, nn_model)
+                    print("passed compute_and_save_cosines")
+                    assert False
+                    # compute_and_save_cosines(batch_images_all_minus_P, batch_actions_all_minus_P, batch_images_P, batch_actions_P, "cos_S_minus_P", iteration)
+                #TODO: compute the cosines
+                # compute_cosines(solved_batch, memory_v2, nn_model)
+
+            if len(current_solved_puzzles) == len(self._states):
+                # we save puzzles that were already solved (whether it was that they were solved initialliy with
+                # a smaller budget or they got solved again with a bigger budget does not matter)
+                curriculum_filename = 'curriculum_budget_' + str (budget)
+                curriculum_filename = join (self._curriculum_folder + curriculum_filename)
+                curriculum = np.array(curriculum, dtype=object)
+                np.save (curriculum_filename, curriculum, allow_pickle=True)
+
             print('Number solved: ', number_solved)
+            # print ('Number still to solve', self._number_problems - len (current_solved_puzzles))
+            d[budget] += 1
             if number_solved == 0:
                 budget *= 2
                 print('Budget: ', budget)
+                d[budget] = 1
                 continue
                                     
             iteration += 1
+
+            unsolved_puzzles = self._all_puzzle_names.difference(current_solved_puzzles)
+            with open(join(self._log_folder + 'unsolved_puzzles_' + self._model_name), 'a') as file:
+                for puzzle in unsolved_puzzles: #current_solved_puzzles:
+                    file.write("%s," % puzzle)
+                file.write ('\n')
+                file.write ('\n')
+
+            # save the data we have so far
+            if at_least_one_got_solved:
+                memory_v2.save_data ()
+            # print("puzzles that we still need to solve", unsolved_puzzles)
+            print("end of while loop iteration")
+            print("")
+
+        memory_v2.save_data ()  # FD
+
     
     def _solve_uniform(self, planner, nn_model):
         iteration = 1

@@ -24,13 +24,18 @@ class KerasModel():
             return self.model.predict(x)
         
     def train_with_memory(self, memory):
+        print("inside model wrapper train with memory")
         return self.model.train_with_memory(memory)
     
     def save_weights(self, filepath):
+        print("now saving nn_weights")
         self.model.save_weights(filepath)
         
     def load_weights(self, filepath):
         self.model.load_weights(filepath).expect_partial()
+
+    def get_gradients_from_batch (self, array_images, array_labels):
+        return self.model.get_gradients_from_batch (array_images, array_labels)
 
 class KerasManager(BaseManager):
     pass

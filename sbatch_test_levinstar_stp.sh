@@ -1,15 +1,19 @@
 #!/bin/bash
 
-declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss" "RegLevinLoss")
-output="output_test_stp/"
-domain_name="4x4-stp-"
-problems_dir="problems/stp/puzzles_4x4_test/"
+#declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
+declare -a losses=("ImprovedLevinLoss")
+output="output_test_stp_mix/"
+domain_name="5x5-stp-"
+problems_dir="problems/stp/puzzles_5x5_test/"
 
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic") 
 heuristic_scheme=("--learned-heuristic")
 algorithm="LevinStar"
 
-for iter in {1..1}; do
+scheduler="online"
+mix_epsilon="0.01"
+
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for loss in ${losses[@]}; do
 			lower_loss=$(echo ${loss} | tr "A-Z" "a-z")
@@ -17,10 +21,15 @@ for iter in {1..1}; do
 			name_scheme=${scheme// /}
 			name_scheme=${name_scheme//-heuristic/}
 			name_scheme=${name_scheme//--/-}
-			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}"
-			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-v${iter}
+			
+			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-mix${mix_epsilon//./}-v${iter}"
+			#output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}"
+			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}
 
-			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${problems_dir} run_bootstrap_test_stp.sh
+			#echo ${output_exp}
+			#echo ${model}
+
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},model=${model},problem=${problems_dir},mix_epsilon=${mix_epsilon} run_bootstrap_test_stp.sh
 		done
 	done
 done

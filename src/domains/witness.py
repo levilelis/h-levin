@@ -840,3 +840,32 @@ class WitnessState(Environment):
                     
     def heuristic_value(self):
         return abs(self._column_tip - self._column_goal) + abs(self._line_tip - self._line_goal)
+
+    def convert_2_dict_for_image_acquisition(self):
+        """
+        Method added by Fatima Davelouis
+        Converts a state to a dictionary. This dictionary can then be accessed from another repository.
+        The purpose of this dictionary is to then execute get_image_representation() method.
+        """
+
+        data = {}
+        data['puzzle_type'] = 'Witness'
+        data['number_of_colors'] = 4
+        data['channels'] = 9
+        state_str = self.__repr__()
+        data['state_repr'] = state_str # this is a string
+        data['size'] = [self._columns, self._lines]
+        data['startPosition'] = [self._column_init, self._line_init]
+        data['maxSize'] = [self._max_columns, self._max_lines]
+
+        data['cells'] = self._cells
+        # data['cells_shape'] = [self._cells.shape[0], self._cells.shape[1]]
+        data['vertical_seg'] = self._v_seg
+        data['horizontal_seg'] = self._h_seg
+
+        data['tips'] = [self._column_tip, self._line_tip]
+        data['endPosition'] = [self._column_goal, self._line_goal]
+        data['dots'] = self._dots
+        # channel for the exit of the puzzle
+
+        return data
