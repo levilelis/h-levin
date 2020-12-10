@@ -14,7 +14,44 @@ from domains.sliding_tile_puzzle import SlidingTilePuzzle
 from domains.sokoban import Sokoban
 from search.puct import PUCT
 from bootstrap import Bootstrap
-from multiprocessing import set_start_method
+
+
+def search_time_limit(states, planner, nn_model, ncpus, time_limit_seconds):
+    """
+    This function runs (best-first) Levin tree search with a learned policy on a set of problems.
+    The search will be bounded by a time limit. The number of nodes expanded and generated will be
+    reported, independently if the planner solved the problem or not. If the planner solves the 
+    problem, then the procedure also reports solution depth.     
+    """          
+    total_expanded = 0
+    total_generated = 0
+    total_cost = 0
+    
+    solutions = {}
+        
+    for name, state in states.items():
+        state.reset()
+        solutions[name] = (-1, -1, -1, -1)
+    
+    with ProcessPoolExecutor(max_workers = ncpus) as executor:
+        args = ((state, name, nn_model, -1, time.time(), time_limit_seconds, 0) for name, state in states.items()) 
+        results = executor.map(planner.search, args)
+    for result in results:
+        solution_depth = result[0]
+        expanded = result[1]
+        generated = result[2]
+        running_time = result[3]
+        puzzle_name = result[4]
+        
+        solutions[puzzle_name] = (solution_depth, expanded, generated, running_time)
+        
+        if solution_depth > 0:
+            total_expanded += expanded
+            total_generated += generated
+            total_cost += solution_depth
+                           
+    for name, data in solutions.items():
+        print("{:s}, {:d}, {:d}, {:d}, {:.2f}".format(name, data[0], data[1], data[2], data[3]))
     
    
 def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-1):
@@ -184,9 +221,6 @@ def main():
     parser.add_argument('-mix', action='store', dest='mix_epsilon', default='0.0', 
                         help='Mixture with a uniform policy')
     
-    parser.add_argument('-w', action='store', dest='weight_astar', default='1.0', 
-                        help='Weight to be used with WA*.')
-    
     parser.add_argument('--default-heuristic', action='store_true', default=False,
                         dest='use_heuristic',
                         help='Use the default heuristic as input')
@@ -207,6 +241,10 @@ def main():
                         dest='learning_mode',
                         help='Train as neural model out of the instances from the problem folder')
     
+    parser.add_argument('--fixed-time', action='store_true', default=False,
+                        dest='fixed_time',
+                        help='Run the planner for a fixed amount of time (specified by time_limit) for each problem instance')
+    
     parameters = parser.parse_args()
     
     states = {}
@@ -221,16 +259,13 @@ def main():
     elif parameters.problem_domain == 'SlidingTile':
         puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
     
-        j = 1
         for filename in puzzle_files:
             with open(join(parameters.problems_folder, filename), 'r') as file:
                 problems = file.readlines()
                 
                 for i in range(len(problems)):
                     puzzle = SlidingTilePuzzle(problems[i])
-                    states['puzzle_' + str(j)] = puzzle
-                    
-                    j += 1
+                    states['puzzle_' + str(i)] = puzzle
     
     elif parameters.problem_domain == 'Witness':
         puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
@@ -275,9 +310,7 @@ def main():
     
     print('Loaded ', len(states), ' instances')
 #     input_size = s.get_image_representation().shape
-
-#     set_start_method('forkserver', force=True)
-            
+           
     KerasManager.register('KerasModel', KerasModel)
     ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 1))
     
@@ -311,8 +344,11 @@ def main():
                 bootstrap.solve_problems(bfs_planner, nn_model)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
-            else:
+            elif parameters.fixed_time:
                 nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
+                search_time_limit(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit))
+            else:
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
         
         if parameters.search_algorithm == 'Levin' or parameters.search_algorithm == 'LevinStar':
@@ -332,8 +368,11 @@ def main():
                 bootstrap.solve_problems(bfs_planner, nn_model)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
-            else:
+            elif parameters.fixed_time:
                 nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
+                search_time_limit(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit))
+            else:
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
                 
         if parameters.search_algorithm == 'LevinMult':
@@ -351,11 +390,11 @@ def main():
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
-                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
         
         if parameters.search_algorithm == 'AStar':
-            bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions, float(parameters.weight_astar))
+            bfs_planner = AStar(parameters.use_heuristic, parameters.use_learned_heuristic, k_expansions)
             
             if parameters.learning_mode and parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
@@ -363,7 +402,7 @@ def main():
                 bootstrap.solve_problems(bfs_planner, nn_model)
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
-                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))  
@@ -377,7 +416,7 @@ def main():
                 bootstrap.solve_problems(bfs_planner, nn_model)
             elif parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm) 
-                nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
+                nn_model.load_weights(join('trained_models_large', parameters.model_name, 'model_weights'))
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))      
