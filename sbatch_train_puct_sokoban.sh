@@ -10,7 +10,7 @@ heuristic_scheme=("--learned-heuristic")
 
 scheduler="online" 
 
-for iter in {1..1}; do
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for c in "${constants[@]}"; do
 			for loss in ${losses[@]}; do
@@ -21,8 +21,8 @@ for iter in {1..1}; do
 				name_scheme=${name_scheme//--/-}
 				c_name=${c//./}
 				name_scheme=${name_scheme//--/-}
-				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}"
-				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}
+				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-graph-v${iter}"
+				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-graph-v${iter}
 		
 				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_puct_sokoban.sh
 			done
