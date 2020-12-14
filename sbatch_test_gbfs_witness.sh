@@ -1,6 +1,6 @@
 #!/bin/bash
 
-output="output_test_witness/"
+output="output_test_witness_fixed_time/"
 domain_name="4x4-witness50k-"
 
 heuristic_scheme=("--learned-heuristic")
