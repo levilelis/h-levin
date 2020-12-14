@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=32
+#SBATCH --ntasks-per-node=40
 #SBATCH --mem=0
-#SBATCH --time=2-10:00      # time (DD-HH:MM)
+#SBATCH --time=2-00:00      # time (DD-HH:MM)
 #SBATCH --output=%N-%j.out  # %N for node name, %j for jobID
 #SBATCH --account=def-lelis
 
