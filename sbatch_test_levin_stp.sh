@@ -1,8 +1,8 @@
 #!/bin/bash
 
-declare -a losses=("ImprovedLevinLoss" "LevinLoss")
+declare -a losses=("ImprovedLevinLoss")
 #declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
-output="output_test_stp_mix/"
+output="output_test_stp_fixed_time/"
 domain_name="5x5-stp-"
 problems_dir="problems/stp/puzzles_5x5_test/"
 
@@ -21,8 +21,8 @@ for iter in {1..5}; do
 			name_scheme=${name_scheme//-heuristic/}
 			name_scheme=${name_scheme//--/-}
 			
-			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-mix${mix_epsilon//./}-v${iter}"
-			#output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}"
+			#output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-mix${mix_epsilon//./}-v${iter}"
+			output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}"
 			model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-v${iter}
 
 			#echo ${output_exp}

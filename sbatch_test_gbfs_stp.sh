@@ -1,6 +1,6 @@
 #!/bin/bash
 
-output="output_test_stp/"
+output="output_test_stp_fixed_time/"
 domain_name="5x5-stp-"
 
 heuristic_scheme=("--learned-heuristic") 
