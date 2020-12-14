@@ -2,7 +2,7 @@
 
 declare -a losses=("CrossEntropyLoss")
 
-output="output_test_sokoban_large/"
+output="output_test_sokoban_fixed_time/"
 domain_name="10x10-sokoban-"
 problems_dir="problems/sokoban/test/000.txt"
 
