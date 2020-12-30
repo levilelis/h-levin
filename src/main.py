@@ -234,11 +234,7 @@ def main():
     parser.add_argument('--blind-search', action='store_true', default=False,
                         dest='blind_search',
                         help='Perform blind search')
-    
-    parser.add_argument('--single-test-file', action='store_true', default=False,
-                        dest='single_test_file',
-                        help='Use this if problem instance is a file containing a single instance.')
-    
+        
     parser.add_argument('--learn', action='store_true', default=False,
                         dest='learning_mode',
                         help='Train as neural model out of the instances from the problem folder')
@@ -251,14 +247,7 @@ def main():
     
     states = {}
     
-    if parameters.problem_domain == 'SlidingTile' and parameters.single_test_file:
-        with open(parameters.problems_folder, 'r') as file:
-            problem = file.readline()
-            instance_name = parameters.problems_folder[parameters.problems_folder.rfind('/') + 1:len(parameters.problems_folder)]
-            puzzle = SlidingTilePuzzle(problem)
-            states[instance_name] = puzzle
-    
-    elif parameters.problem_domain == 'SlidingTile':
+    if parameters.problem_domain == 'SlidingTile':
         puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
     
         j = 1
@@ -271,16 +260,32 @@ def main():
                     states['puzzle_' + str(j)] = puzzle
                     
                     j += 1
-    
+                        
     elif parameters.problem_domain == 'Witness':
         puzzle_files = [f for f in listdir(parameters.problems_folder) if isfile(join(parameters.problems_folder, f))]
         
-        for file in puzzle_files:
-            if '.' in file:
+        j = 1
+               
+        for filename in puzzle_files:
+            if '.' in filename:
                 continue
-            s = WitnessState()
-            s.read_state(join(parameters.problems_folder, file))
-            states[file] = s
+            
+            with open(join(parameters.problems_folder, filename), 'r') as file:
+                puzzle = file.readlines()
+                
+                i = 0
+                while i < len(puzzle):
+                    k = i
+                    while k < len(puzzle) and puzzle[k] != '\n':
+                        k += 1
+                    s = WitnessState()
+                    s.read_state_from_string(puzzle[i:k])
+                    states['puzzle_' + str(j)] = s
+                    i = k + 1
+                    j += 1
+#             s.read_state(join(parameters.problems_folder, filename))
+#             states[filename] = s
+            
     elif parameters.problem_domain == 'Sokoban':
         problem = []
         puzzle_files = []

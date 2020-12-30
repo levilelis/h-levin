@@ -805,7 +805,32 @@ class WitnessState(Environment):
 #         copy_state._cells = self._cells.copy()
 #         
 #         return copy_state    
-        
+
+    def read_state_from_string(self, puzzle):
+        """
+        Reads a puzzle from a string. It follows the format speficied in method save_state of this class.
+        """
+        for s in puzzle:
+            s = s.replace('\n', '')
+            if 'Size: ' in s:
+                values = s.replace('Size: ', '').split(' ')
+                self._lines = int(values[0])
+                self._columns = int(values[1])
+            if 'Init: ' in s:
+                values = s.replace('Init: ', '').split(' ')
+                self._line_init = int(values[0])
+                self._column_init = int(values[1])
+            if 'Goal: ' in s:
+                values = s.replace('Goal: ', '').split(' ')
+                self._line_goal = int(values[0]) 
+                self._column_goal = int(values[1])
+                self.__init_structures()
+            if 'Colors: ' in s:
+                values = s.replace('Colors: |', '').split('|')
+                for t in values:
+                    numbers = t.split(' ')
+                    self._cells[int(numbers[0])][int(numbers[1])] = int(numbers[2])
+
         
     def read_state(self, filename):
         """
