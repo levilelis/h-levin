@@ -103,6 +103,9 @@ class AStar():
         slack_time = data[6]
         
         start_time = time.time()
+        
+        if slack_time == 0:
+            start_overall_time = time.time()
                 
         _open = []
         _closed = set()

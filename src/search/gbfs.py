@@ -98,6 +98,9 @@ class GBFS():
         
         start_time = time.time()
         
+        if slack_time == 0:
+            start_overall_time = time.time()
+        
         expanded = 0
         generated = 0
         
@@ -212,7 +215,6 @@ class GBFS():
         
         while len(_open) > 0:
             node = heapq.heappop(_open)
-            print(node._h)
             
             expanded += 1
             

@@ -141,7 +141,8 @@ class BFSLevin():
             
         action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
         
-        node = TreeNode(None, state, 1, 0, 0, -1)
+        node = TreeNode(None, state, 0, 0, 0, -1)
+        
         node.set_probability_distribution_actions(action_distribution_log[0])
         
         heapq.heappush(_open, node)
@@ -269,7 +270,8 @@ class BFSLevin():
             
         action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1/action_distribution.shape[1])))
         
-        node = TreeNode(None, state, 1, 0, 0, -1)
+        node = TreeNode(None, state, 0, 0, 0, -1)
+        
         node.set_probability_distribution_actions(action_distribution_log[0])
         
         heapq.heappush(_open, node)

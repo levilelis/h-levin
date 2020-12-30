@@ -417,6 +417,9 @@ class PUCT():
         expanded = 0
 
         start_time = time.time()
+        
+        if slack_time == 0:
+            start_overall_time = time.time()
 
         if self._use_learned_heuristic:
             _, action_probs, _ = self._nn_model.predict(np.array([state.get_image_representation()]))
