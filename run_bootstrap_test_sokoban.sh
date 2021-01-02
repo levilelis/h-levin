@@ -9,4 +9,4 @@
 module load python/3.6
 source tensorflow/bin/activate
 #python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 2000 -time 172200 -d Sokoban -mix ${mix_epsilon}
-python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 2000 -time 5400 -d Sokoban --fixed-time
+python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 2000 -d Sokoban --fixed-time -number-test-instances 100 -time 3600

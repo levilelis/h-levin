@@ -243,6 +243,9 @@ def main():
                         dest='fixed_time',
                         help='Run the planner for a fixed amount of time (specified by time_limit) for each problem instance')
     
+    parser.add_argument('-number-test-instances', action='store', dest='number_test_instances', default='0', 
+                        help='Maximum number of test instances (value of zero will use all instances in the test file).')
+    
     parameters = parser.parse_args()
     
     states = {}
@@ -318,6 +321,19 @@ def main():
                 puzzle = Sokoban(problem)
                 states['puzzle_' + str(problem_id)] = puzzle
     
+    if int(parameters.number_test_instances) != 0:
+        states_capped = {}
+        counter = 0
+        
+        for name, puzzle in states.items():
+            states_capped[name] = puzzle
+            counter += 1
+            
+            if counter == int(parameters.number_test_instances):
+                break
+        
+        states = states_capped     
+    
     print('Loaded ', len(states), ' instances')
 #     input_size = s.get_image_representation().shape
            
@@ -327,6 +343,8 @@ def main():
     k_expansions = 32
     
 #     print('Number of cpus available: ', ncpus)
+    
+    start = time.time()
     
     with KerasManager() as manager:
                 
@@ -439,6 +457,8 @@ def main():
             else:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))      
             
+            
+    print('Total time: ', time.time() - start)
 if __name__ == "__main__":
     main()
     

@@ -9,7 +9,7 @@
 module load python/3.6
 source tensorflow/bin/activate
 #python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -w ${weight} -b 2000 -time 172200 -d Sokoban
-python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -w ${weight} -b 2000 -time 5400 -d Sokoban --fixed-time
+python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -w ${weight} -b 2000 -d Sokoban --fixed-time -number-test-instances 100 -time 3600
 
 #MMM SBATCH --cpus-per-task=1   # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
 #MMM SBATCH --mem=12000M        # memory per node
