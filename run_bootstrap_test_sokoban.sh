@@ -10,7 +10,3 @@ source tensorflow/bin/activate
 #python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 2000 -time 172200 -d Sokoban -mix ${mix_epsilon}
 python src/main.py ${scheme} -a ${algorithm} -m ${model} -p ${problem} -b 2000 -d Sokoban --fixed-time -number-test-instances 100 -time 3600
 
-#MMM SBATCH --nodes=1
-#MMM SBATCH --ntasks-per-node=40
-#MMM SBATCH --mem=0
-#MMM SBATCH --time=2-00:00      # time (DD-HH:MM)
