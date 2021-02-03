@@ -7,5 +7,5 @@
 
 module load python/3.6
 source tensorflow/bin/activate
-python src/main.py ${scheme} -a ${algorithm} -l ${loss} -m ${model} -w ${weight} -p problems/sokoban/train_50000/ --learn -d Sokoban -b 2000 -g 10 -scheduler ${scheduler}
+python src/main.py ${scheme} -a ${algorithm} -l ${loss} -m ${model} -w ${weight} -p problems/sokoban/train_50000/ --learn -d Sokoban -b 2000 -g 10
 

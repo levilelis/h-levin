@@ -9,7 +9,6 @@ from concurrent.futures.process import ProcessPoolExecutor
 import argparse
 from search.a_star import AStar
 from search.gbfs import GBFS
-from search.bfs_levin_mult import BFSLevinMult
 from domains.sliding_tile_puzzle import SlidingTilePuzzle
 from domains.sokoban import Sokoban
 from search.puct import PUCT
@@ -104,79 +103,6 @@ def search(states, planner, nn_model, ncpus, time_limit_seconds, search_budget=-
         
         search_budget *= 2
 
-# def bootstrap_learning_bfs(states, planner, nn_model, output, initial_budget, ncpus):
-#  
-#     log_folder = 'logs_large/'
-#     models_folder = 'trained_models_large/' + output
-#      
-#     if not os.path.exists(models_folder):
-#         os.makedirs(models_folder)
-#          
-#     if not os.path.exists(log_folder):
-#         os.makedirs(log_folder)
-#      
-#     number_problems = len(states)
-#      
-#     iteration = 1
-#     number_solved = 0
-#     total_expanded = 0
-#     total_generated = 0
-#      
-#     budget = initial_budget
-#     memory = Memory()
-#     start = time.time()
-#      
-#     current_solved_puzzles = set()
-#      
-#     while len(current_solved_puzzles) < number_problems:
-#         number_solved = 0
-#          
-#         with ProcessPoolExecutor(max_workers = ncpus) as executor:
-#             args = ((state, name, budget, nn_model) for name, state in states.items()) 
-#             results = executor.map(planner.search_for_learning, args)
-#         for result in results:
-#             has_found_solution = result[0]
-#             trajectory = result[1]
-#             total_expanded += result[2]
-#             total_generated += result[3]
-#             puzzle_name = result[4]
-#              
-#             if has_found_solution:
-#                 memory.add_trajectory(trajectory)
-#               
-#             if has_found_solution and puzzle_name not in current_solved_puzzles:
-#                 number_solved += 1
-#                 current_solved_puzzles.add(puzzle_name)
-#          
-#         end = time.time()
-#         with open(join(log_folder + 'training_bootstrap_' + output), 'a') as results_file:
-#             results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(iteration, 
-#                                                                              number_solved, 
-#                                                                              number_problems - len(current_solved_puzzles), 
-#                                                                              budget,
-#                                                                              total_expanded,
-#                                                                              total_generated, 
-#                                                                              end-start)))
-#             results_file.write('\n')
-#          
-#         print('Number solved: ', number_solved)
-#         if number_solved > 0:
-#             for _ in range(10):
-#                 loss = nn_model.train_with_memory(memory)
-#                 print(loss)
-# #             if number_solved < 20:
-# #                 budget *= 2
-#             memory.clear()
-#              
-#             nn_model.save_weights(join(models_folder, 'model_weights')) 
-#         else:
-#             budget *= 2
-#             print('Budget: ', budget)
-#             continue
-#                                  
-#         iteration += 1
-    
-
 def main():
     """
     It is possible to use this system to either train a new neural network model through the bootstrap system and
@@ -212,11 +138,7 @@ def main():
     
     parser.add_argument('-time', action='store', dest='time_limit', default='43200', 
                         help='Time limit in seconds for search')
-    
-    parser.add_argument('-scheduler', action='store', default='uniform',
-                        dest='scheduler',
-                        help='Run Bootstrap with a scheduler (either uniform or gbs)')
-    
+        
     parser.add_argument('-mix', action='store', dest='mix_epsilon', default='0.0', 
                         help='Mixture with a uniform policy')
     
@@ -353,7 +275,6 @@ def main():
         
         if parameters.learning_mode:
             bootstrap = Bootstrap(states, parameters.model_name, 
-                                  parameters.scheduler, 
                                   ncpus=ncpus, 
                                   initial_budget=int(parameters.search_budget),
                                   gradient_steps=int(parameters.gradient_steps))
@@ -369,7 +290,7 @@ def main():
             
             if parameters.learning_mode:
                 #bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
-                bootstrap.solve_problems(bfs_planner, nn_model)            
+                bootstrap.solve_uniform_online(bfs_planner, nn_model)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             elif parameters.fixed_time:
@@ -393,7 +314,7 @@ def main():
             
             if parameters.learning_mode:
 #                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
-                bootstrap.solve_problems(bfs_planner, nn_model)            
+                bootstrap.solve_uniform_online(bfs_planner, nn_model)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             elif parameters.fixed_time:
@@ -414,7 +335,7 @@ def main():
             
             if parameters.learning_mode:
 #                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
-                bootstrap.solve_problems(bfs_planner, nn_model)            
+                bootstrap.solve_uniform_online(bfs_planner, nn_model)            
             elif parameters.blind_search:
                 search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
             else:
@@ -427,7 +348,7 @@ def main():
             if parameters.learning_mode and parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
 #                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
-                bootstrap.solve_problems(bfs_planner, nn_model)
+                bootstrap.solve_uniform_online(bfs_planner, nn_model)
             elif parameters.fixed_time and parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
                 nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))
@@ -445,7 +366,7 @@ def main():
             if parameters.learning_mode:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
 #                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
-                bootstrap.solve_problems(bfs_planner, nn_model)
+                bootstrap.solve_uniform_online(bfs_planner, nn_model)
             elif parameters.fixed_time and parameters.use_learned_heuristic:
                 nn_model.initialize(parameters.loss_function, parameters.search_algorithm)
                 nn_model.load_weights(join('trained_models_online', parameters.model_name, 'model_weights'))

@@ -22,7 +22,7 @@ for iter in {1..5}; do
 			#echo ${model}
 			#echo ${output_exp}
 	
-			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler},weight=${weight} run_bootstrap_train_astar_witness.sh
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model},weight=${weight} run_bootstrap_train_astar_witness.sh
 		done
 	done
 done
