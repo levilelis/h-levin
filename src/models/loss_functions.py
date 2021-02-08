@@ -38,7 +38,7 @@ class ImprovedLevinMSELoss(LossFunction):
         if a < 0:
             a = 0        
         
-        loss *= tf.stop_gradient(tf.convert_to_tensor(expanded * a, dtype=tf.float64))
+        loss *= tf.convert_to_tensor(expanded * a, dtype=tf.float64)
         
         solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
         loss += self.mse(solution_costs_tf, logits_h) + model._reg_const * weights_l2_norm
@@ -72,7 +72,7 @@ class ImprovedLevinLoss(LossFunction):
         if a < 0:
             a = 0        
         
-        loss *= tf.stop_gradient(tf.convert_to_tensor(expanded * a, dtype=tf.float64))
+        loss *= tf.convert_to_tensor(expanded * a, dtype=tf.float64)
         
         loss += model._reg_const * weights_l2_norm
 
@@ -148,8 +148,7 @@ class LevinLoss(LossFunction):
         
         loss = self.cross_entropy_loss(actions_one_hot, logits)
         
-#         loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_expanded(), dtype=tf.float64))
-        loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_non_normalized_expanded(), dtype=tf.float64))
+        loss *= tf.convert_to_tensor(trajectory.get_non_normalized_expanded(), dtype=tf.float64)
         loss += model._reg_const * weights_l2_norm
 
         return loss
@@ -212,8 +211,7 @@ class LevinMSELoss(LossFunction):
         
         loss = self.cross_entropy_loss(actions_one_hot, logits_pi)
         
-#         loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_expanded(), dtype=tf.float64))
-        loss *= tf.stop_gradient(tf.convert_to_tensor(trajectory.get_non_normalized_expanded(), dtype=tf.float64))
+        loss *= tf.convert_to_tensor(trajectory.get_non_normalized_expanded(), dtype=tf.float64)
         
         solution_costs_tf = tf.expand_dims(tf.convert_to_tensor(trajectory.get_solution_costs(), dtype=tf.float64), 1)
         loss += self.mse(solution_costs_tf, logits_h) + model._reg_const * weights_l2_norm
