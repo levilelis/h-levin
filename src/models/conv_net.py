@@ -209,20 +209,26 @@ class ConvNet(tf.keras.Model):
                                             name='conv1', 
                                             activation='relu', 
                                             dtype='float64')
-        # self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool1', dtype='float64')
-        self.conv2 = tf.keras.layers.Conv2D(filters, 
+        self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool1', dtype='float64')
+        self.conv2 = tf.keras.layers.Conv2D(64,
                                             kernel_size, 
                                             name='conv2', 
                                             activation='relu', 
                                             dtype='float64')
-        #self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool2', dtype='float64')
+        self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool2', dtype='float64')
         self.flatten = tf.keras.layers.Flatten(name='flatten1', dtype='float64')
-        self.dense1 = tf.keras.layers.Dense(128, 
+        # Was 128 dense
+        self.dense1 = tf.keras.layers.Dense(2048,
                                             name='dense1', 
                                             activation='relu', 
                                             dtype='float64')
-        self.dense2 = tf.keras.layers.Dense(number_actions, 
-                                            name='dense2', 
+        # self.drop1 = tf.keras.layers.Dropout(.5)
+        self.dense2 = tf.keras.layers.Dense(2048,
+                                            name='dense2',
+                                            activation='relu',
+                                            dtype='float64')
+        self.dense3 = tf.keras.layers.Dense(number_actions,
+                                            name='dense3',
                                             dtype='float64')
         
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)
@@ -245,12 +251,14 @@ class ConvNet(tf.keras.Model):
     def call(self, input_tensor):
         
         x = self.conv1(input_tensor)
-#         x = self.pool1(x)
+        x = self.pool1(x)
         x = self.conv2(x)
-#         x = self.pool2(x)
+        x = self.pool2(x)
         x = self.flatten(x)
         x = self.dense1(x)
-        logits = self.dense2(x)
+        #x = self.drop1(x)
+        x = self.dense2(x)
+        logits = self.dense3(x)
         x_softmax = tf.nn.softmax(logits)
         x_log_softmax = tf.nn.log_softmax(logits)
         

@@ -169,7 +169,8 @@ class CrossEntropyLoss(LossFunction):
         for w in weights:
             weights_l2_norm += tf.norm(w, ord=2)
         
-        return self.cross_entropy_loss(actions_one_hot, logits) + model._reg_const * weights_l2_norm
+        #return self.cross_entropy_loss(actions_one_hot, logits) + model._reg_const * weights_l2_norm
+        return self.cross_entropy_loss(actions_one_hot, logits)
     
 class CrossEntropyMSELoss(LossFunction):
     
