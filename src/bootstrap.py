@@ -921,6 +921,10 @@ class Bootstrap:
 		start = time.time()
 
 		current_solved_puzzles = set()
+		state_budget = {}
+
+		for name, state in self._states.items():
+			state_budget[name] = self._initial_budget
 
 		while len(current_solved_puzzles) < self._number_problems:
 			number_solved = 0
@@ -931,7 +935,8 @@ class Bootstrap:
 				batch_problems[name] = state
 
 			with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
-				args = ((state, name, budget, nn_model) for name, state in batch_problems.items())
+				# args = ((state, name, budget, nn_model) for name, state in batch_problems.items())
+				args = ((state, name, state_budget[name], nn_model) for name, state in batch_problems.items())
 				results = executor.map(planner.search_for_learning, args)
 			for result in results:
 				has_found_solution = result[0]
@@ -939,6 +944,7 @@ class Bootstrap:
 				total_expanded += result[2]
 				total_generated += result[3]
 				puzzle_name = result[4]
+				state_budget[puzzle_name] = result[5]  # new budget for this particular puzzle
 
 				if has_found_solution:
 					memory.add_trajectory(trajectory)
@@ -947,7 +953,7 @@ class Bootstrap:
 					puzzle_solution_pi = trajectory.get_solution_pi()
 					print(puzzle_name, 'pi:', puzzle_solution_pi)
 					with open(join(self._log_folder + 'training_bootstrap_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
-						result_file.write("{:s}, {:e}".format(puzzle_name, puzzle_solution_pi))
+						result_file.write("{:s}, {:e}, {:d}".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
 						result_file.write('\n')
 
 			if memory.number_trajectories() > 0:
@@ -972,12 +978,16 @@ class Bootstrap:
 				results_file.write('\n')
 
 			print('Number solved: ', number_solved)
-			if number_solved == 0:
+			"""if number_solved == 0:
 				#budget *= 2
 				budget += 1  # Trying the older code's strategy
 				print('Budget: ', budget)
 				continue
-
+			else:"""
+			if number_solved != 0:
+				# budget = self._initial_budget
+				for name, state in self._states.items():  # Reseting budget after train
+					state_budget[name] = self._initial_budget
 			iteration += 1
 
 	def solve_problems(self, planner, nn_model, ordering=None, all_paths=None):

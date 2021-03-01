@@ -336,7 +336,7 @@ class BFSLevin():
 
 			#if expanded >= budget:
 			if levin_cost > budget:  # Trying the older code's strategy
-				return False, None, expanded, generated, puzzle_name
+				return False, None, expanded, generated, puzzle_name, math.ceil(levin_cost) # Returning ceil of levin_cost as new budget
 
 			for a in actions:
 				child = copy.deepcopy(node.get_game_state())
@@ -350,7 +350,7 @@ class BFSLevin():
 					print('Solved puzzle: ', puzzle_name, ' expanding ', expanded, ' with budget: ', budget)
 					trajectory = self._store_trajectory_memory(child_node, expanded)
 
-					return True, trajectory, expanded, generated, puzzle_name
+					return True, trajectory, expanded, generated, puzzle_name, budget + 1
 
 				children_to_be_evaluated.append(child_node)
 				x_input_of_children_to_be_evaluated.append(child.get_image_representation())
@@ -386,4 +386,4 @@ class BFSLevin():
 				children_to_be_evaluated.clear()
 				x_input_of_children_to_be_evaluated.clear()
 		print('Emptied Open List in puzzle: ', puzzle_name)
-		return False, None, expanded, generated, puzzle_name
+		return False, None, expanded, generated, puzzle_name, budget + 1
