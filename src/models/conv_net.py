@@ -4,6 +4,9 @@ from models.loss_functions import LevinLoss, CrossEntropyLoss,\
     CrossEntropyMSELoss, LevinMSELoss, MSELoss, ImprovedLevinLoss,\
     ImprovedLevinMSELoss, RegLevinLoss, RegLevinMSELoss
 
+from models.memory import Trajectory
+
+
 class InvalidLossFunction(Exception):
     pass
 
@@ -222,7 +225,7 @@ class ConvNet(tf.keras.Model):
                                             name='dense1', 
                                             activation='relu', 
                                             dtype='float64')
-        # self.drop1 = tf.keras.layers.Dropout(.5)
+        self.drop1 = tf.keras.layers.Dropout(.5)  # testing
         self.dense2 = tf.keras.layers.Dense(2048,
                                             name='dense2',
                                             activation='relu',
@@ -256,7 +259,7 @@ class ConvNet(tf.keras.Model):
         x = self.pool2(x)
         x = self.flatten(x)
         x = self.dense1(x)
-        #x = self.drop1(x)
+        x = self.drop1(x)  # testing
         x = self.dense2(x)
         logits = self.dense3(x)
         x_softmax = tf.nn.softmax(logits)
@@ -296,6 +299,40 @@ class ConvNet(tf.keras.Model):
             self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
             losses.append(loss)
         
+        return np.mean(losses)
+
+    def train_with_state_action(self, memory, batch_size):
+        losses = []
+        start = 0
+        end = batch_size
+        memory.shuffle_state_action()
+        state_action_pairs = memory.get_state_action_pairs()
+
+        finished = False
+
+        while not finished:
+            if end > len(state_action_pairs):
+                end = len(state_action_pairs)
+                finished = True
+
+            states = []
+            actions = []
+            for i in range(start, end):
+                states.append(state_action_pairs[i][0])
+                actions.append(state_action_pairs[i][1])
+
+            pairs = Trajectory(states, actions, [], 0, 0)
+
+            with tf.GradientTape() as tape:
+                loss = self._loss_function.compute_loss(pairs, self)
+
+            grads = tape.gradient(loss, self.trainable_weights)
+            self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
+            losses.append(loss)
+
+            start = end
+            end += batch_size
+
         return np.mean(losses)
             
     def train(self, states, y):

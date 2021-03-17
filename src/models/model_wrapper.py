@@ -25,6 +25,9 @@ class KerasModel():
         
     def train_with_memory(self, memory):
         return self.model.train_with_memory(memory)
+
+    def train_with_state_action(self, memory, batch_size):
+        return self.model.train_with_state_action(memory, batch_size)
     
     def save_weights(self, filepath):
         self.model.save_weights(filepath)

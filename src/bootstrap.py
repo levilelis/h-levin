@@ -960,7 +960,8 @@ class Bootstrap:
 				#for _ in range(self._gradient_steps):
 				loss = 1
 				while loss > 0.1:
-					loss = nn_model.train_with_memory(memory)
+					#loss = nn_model.train_with_memory(memory)
+					loss = nn_model.train_with_state_action(memory, 1024)
 					print('Loss: ', loss)
 				nn_model.save_weights(join(self._models_folder, 'model_weights'))
 
@@ -986,7 +987,7 @@ class Bootstrap:
 			else:"""
 			if number_solved != 0:
 				# budget = self._initial_budget
-				for name, state in self._states.items():  # Reseting budget after train
+				for name, state in self._states.items():  # Resetting budget after train
 					state_budget[name] = self._initial_budget
 			iteration += 1
 

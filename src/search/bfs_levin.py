@@ -55,7 +55,7 @@ class TreeNode:
 
 	def get_g(self):
 		"""
-		Returns the pi cost of a node
+		Returns the pi cost of a node (shouldn't be the depth?)
 		"""
 		return self._g
 
@@ -323,11 +323,15 @@ class BFSLevin():
 
 		children_to_be_evaluated = []
 		x_input_of_children_to_be_evaluated = []
-		levin_cost = 0
+		current_levin_cost = 0
 
 		while len(_open) > 0:
 
 			node = heapq.heappop(_open)
+
+			if expanded > 1:
+				current_levin_cost = self.get_levin_cost(node, None)
+				#print(puzzle_name, current_levin_cost)
 
 			expanded += 1
 
@@ -335,8 +339,8 @@ class BFSLevin():
 			probability_distribution_log = node.get_probability_distribution_actions()
 
 			#if expanded >= budget:
-			if levin_cost > budget:  # Trying the older code's strategy
-				return False, None, expanded, generated, puzzle_name, math.ceil(levin_cost) # Returning ceil of levin_cost as new budget
+			if current_levin_cost > budget:  # Trying the older code's strategy
+				return False, None, expanded, generated, puzzle_name, math.ceil(current_levin_cost)  # Returning ceil of levin_cost as new budget
 
 			for a in actions:
 				child = copy.deepcopy(node.get_game_state())

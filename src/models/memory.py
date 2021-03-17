@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import sys
 
@@ -38,6 +40,7 @@ class Memory():
     def __init__(self):
         self._trajectories = []
         self._max_expanded = -sys.maxsize
+        self._state_action_pairs = []
         
     def add_trajectory(self, trajectory):
         if trajectory.get_expanded() > self._max_expanded:
@@ -61,7 +64,21 @@ class Memory():
     def merge_trajectories(self, other):
         for t in other._trajectories:
             self._trajectories.append(t)
-    
+
     def clear(self):
         self._trajectories.clear()
         self._max_expanded = -sys.maxsize
+
+    def shuffle_state_action(self):
+        self._state_action_pairs.clear()
+
+        for t in self._trajectories:
+            states = t.get_states()
+            actions = t.get_actions()
+            for i in range(len(states)):
+                self._state_action_pairs.append([states[i], actions[i]])
+
+        random.shuffle(self._state_action_pairs)
+
+    def get_state_action_pairs(self):
+        return self._state_action_pairs
