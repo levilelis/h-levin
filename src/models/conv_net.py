@@ -317,9 +317,13 @@ class ConvNet(tf.keras.Model):
 
             states = []
             actions = []
-            for i in range(start, end):
-                states.append(state_action_pairs[i][0])
-                actions.append(state_action_pairs[i][1])
+            if start != end:
+                for i in range(start, end):
+                    states.append(state_action_pairs[i][0])
+                    actions.append(state_action_pairs[i][1])
+            else:
+                states.append(state_action_pairs[end][0])
+                actions.append(state_action_pairs[end][1])
 
             pairs = Trajectory(states, actions, [], 0, 0)
 

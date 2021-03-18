@@ -73,6 +73,7 @@ class Memory():
         self._state_action_pairs.clear()
 
         for t in self._trajectories:
+            t.normalize_expanded(self._max_expanded)
             states = t.get_states()
             actions = t.get_actions()
             for i in range(len(states)):
