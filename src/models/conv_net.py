@@ -305,8 +305,7 @@ class ConvNet(tf.keras.Model):
         losses = []
         start = 0
         end = batch_size
-        memory.shuffle_state_action()
-        state_action_pairs = memory.get_state_action_pairs()
+        state_action_pairs = memory.get_preprocessed_pairs()
 
         finished = False
 
@@ -314,6 +313,8 @@ class ConvNet(tf.keras.Model):
             if end > len(state_action_pairs):
                 end = len(state_action_pairs)
                 finished = True
+                if start == end:
+                    break
 
             states = []
             actions = []

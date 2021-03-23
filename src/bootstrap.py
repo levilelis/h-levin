@@ -956,22 +956,25 @@ class Bootstrap:
 						result_file.write("{:s}, {:e}, {:d}".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
 						result_file.write('\n')
 
-			if memory.number_trajectories() > 0:
+			memory.preprocess_data()
+			print('preprocessed pairs:', len(memory.get_preprocessed_pairs()))
+			#if memory.number_trajectories() > 0:
 				#for _ in range(self._gradient_steps):
-				loss = 1
-				while loss > 0.1:
-					#loss = nn_model.train_with_memory(memory)
-					loss = nn_model.train_with_state_action(memory, 1024)
-					print('Loss: ', loss)
-				nn_model.save_weights(join(self._models_folder, 'model_weights'))
+			loss = 1
+			while loss > 0.1:
+				#loss = nn_model.train_with_memory(memory)
+				loss = nn_model.train_with_state_action(memory, 1024)
+				print('Loss: ', loss)
+			nn_model.save_weights(join(self._models_folder, 'model_weights'))
 
 			batch_problems.clear()
 
 			end = time.time()
 			with open(join(self._log_folder + 'training_bootstrap_' + self._model_name), 'a') as results_file:
-				results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(iteration,
+				results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(iteration,
 																				 number_solved,
 																				 self._number_problems - len(current_solved_puzzles),
+				                                                                 len(memory.get_preprocessed_pairs()),
 																				 budget,
 																				 total_expanded,
 																				 total_generated,
