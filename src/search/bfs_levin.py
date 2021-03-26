@@ -311,8 +311,8 @@ class BFSLevin():
 		action_distribution_log = np.log(
 			(1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1 / action_distribution.shape[1])))
 
-		#node = TreeNode(None, state, 1, 0, 0, -1)
-		node = TreeNode(None, state, 0, 0, 0, -1)
+		# node = TreeNode(None, state, 1, 0, 0, -1)  # older
+		node = TreeNode(None, state, 0, 1, 0, -1)  # newer (second 0 is depth which should always start at 1 for levinb_cost calculation)
 		node.set_probability_distribution_actions(action_distribution_log[0])
 
 		heapq.heappush(_open, node)
@@ -323,15 +323,14 @@ class BFSLevin():
 
 		children_to_be_evaluated = []
 		x_input_of_children_to_be_evaluated = []
-		current_levin_cost = 0
 
 		while len(_open) > 0:
 
 			node = heapq.heappop(_open)
 
-			if expanded > 1:
-				current_levin_cost = self.get_levin_cost(node, None)
-				#print(puzzle_name, current_levin_cost)
+			#if expanded > 1:
+			current_levin_cost = self.get_levin_cost(node, None)
+			#print(puzzle_name, current_levin_cost)
 
 			expanded += 1
 

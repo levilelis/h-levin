@@ -956,18 +956,10 @@ class Bootstrap:
 						result_file.write("{:s}, {:e}, {:d}".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
 						result_file.write('\n')
 
-			memory.preprocess_data()
-			print('preprocessed pairs:', len(memory.get_preprocessed_pairs()))
-			#if memory.number_trajectories() > 0:
-				#for _ in range(self._gradient_steps):
-			loss = 1
-			while loss > 0.1:
-				#loss = nn_model.train_with_memory(memory)
-				loss = nn_model.train_with_state_action(memory, 1024)
-				print('Loss: ', loss)
-			nn_model.save_weights(join(self._models_folder, 'model_weights'))
-
-			batch_problems.clear()
+					if 'witness' in puzzle_name:
+						with open(join(self._log_folder + 'training_bootstrap_' + self._model_name + '_witness_ordering'), 'a') as result_file:
+							result_file.write("{:s}, {:e}, {:d}, {:d}".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name], iteration))
+							result_file.write('\n')
 
 			end = time.time()
 			with open(join(self._log_folder + 'training_bootstrap_' + self._model_name), 'a') as results_file:
@@ -981,6 +973,27 @@ class Bootstrap:
 																				 end-start)))
 				results_file.write('\n')
 
+			if number_solved != 0:
+				# budget = self._initial_budget
+				for name, state in self._states.items():  # Resetting budget after train
+					state_budget[name] = self._initial_budget
+			else:  # If none solved, skip training
+				continue
+
+			memory.preprocess_data()
+			print('preprocessed pairs:', len(memory.get_preprocessed_pairs()))
+			#if memory.number_trajectories() > 0:
+				#for _ in range(self._gradient_steps):
+			loss = 1
+			while loss > 0.1:
+				#loss = nn_model.train_with_memory(memory)
+				loss = nn_model.train_with_state_action(memory, 1024)
+				print('Loss: ', loss)
+
+			iteration += 1
+			nn_model.save_weights(join(self._models_folder, 'model_weights'))
+			batch_problems.clear()
+
 			print('Number solved: ', number_solved)
 			"""if number_solved == 0:
 				#budget *= 2
@@ -988,11 +1001,11 @@ class Bootstrap:
 				print('Budget: ', budget)
 				continue
 			else:"""
-			if number_solved != 0:
+			"""if number_solved != 0:
 				# budget = self._initial_budget
 				for name, state in self._states.items():  # Resetting budget after train
 					state_budget[name] = self._initial_budget
-			iteration += 1
+			iteration += 1"""
 
 	def solve_problems(self, planner, nn_model, ordering=None, all_paths=None):
 		if self._scheduler == 'gbs':
