@@ -212,20 +212,20 @@ class ConvNet(tf.keras.Model):
                                             name='conv1', 
                                             activation='relu', 
                                             dtype='float64')
-        self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool1', dtype='float64')
+        self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='pool1', dtype='float64')
         self.conv2 = tf.keras.layers.Conv2D(64,
                                             kernel_size, 
                                             name='conv2', 
                                             activation='relu', 
                                             dtype='float64')
-        self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid', name='pool2', dtype='float64')
+        self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='pool2', dtype='float64')
         self.flatten = tf.keras.layers.Flatten(name='flatten1', dtype='float64')
         # Was 128 dense
         self.dense1 = tf.keras.layers.Dense(2048,
                                             name='dense1', 
                                             activation='relu', 
                                             dtype='float64')
-        self.drop1 = tf.keras.layers.Dropout(.5)  # testing
+        self.drop1 = tf.keras.layers.Dropout(0.5)  # testing
         self.dense2 = tf.keras.layers.Dense(2048,
                                             name='dense2',
                                             activation='relu',
