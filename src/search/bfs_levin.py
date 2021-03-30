@@ -350,7 +350,7 @@ class BFSLevin():
 									  a)
 
 				if child.is_solution():
-					print('Solved puzzle: ', puzzle_name, ' expanding ', expanded, ' with budget: ', budget)
+					print('Solved puzzle: ', puzzle_name, ' expanding ', expanded, ' with budget: ', budget + 1, ' exp(d/pi):', math.exp((budget + 1)), 'depth:', child_node.get_g())
 					trajectory = self._store_trajectory_memory(child_node, expanded)
 
 					return True, trajectory, expanded, generated, puzzle_name, budget + 1

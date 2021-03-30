@@ -1,3 +1,5 @@
+import math
+
 import tensorflow as tf
 import numpy as np
 from models.loss_functions import LevinLoss, CrossEntropyLoss,\
@@ -211,25 +213,33 @@ class ConvNet(tf.keras.Model):
                                             kernel_size, 
                                             name='conv1', 
                                             activation='relu', 
-                                            dtype='float64')
+                                            dtype='float64',
+                                            kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(12 * 12 * 9)),  # equivalent to image_size * image_size * number_channels from old code
+                                            bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
         self.pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='pool1', dtype='float64')
         self.conv2 = tf.keras.layers.Conv2D(64,
                                             kernel_size, 
                                             name='conv2', 
                                             activation='relu', 
-                                            dtype='float64')
+                                            dtype='float64',
+                                            kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(6 * 6 * 9)),  # equivalent to image_size/2 * image_size/2 * number_channels from old code
+                                            bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
         self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='pool2', dtype='float64')
         self.flatten = tf.keras.layers.Flatten(name='flatten1', dtype='float64')
         # Was 128 dense
         self.dense1 = tf.keras.layers.Dense(2048,
                                             name='dense1', 
                                             activation='relu', 
-                                            dtype='float64')
+                                            dtype='float64',
+                                            kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(3 * 3 * 64)),  # equivalent to old code
+                                            bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
         self.drop1 = tf.keras.layers.Dropout(0.5)  # testing
         self.dense2 = tf.keras.layers.Dense(2048,
                                             name='dense2',
                                             activation='relu',
-                                            dtype='float64')
+                                            dtype='float64',
+                                            kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(2048)),  # equivalent to old code
+                                            bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
         self.dense3 = tf.keras.layers.Dense(number_actions,
                                             name='dense3',
                                             dtype='float64')
