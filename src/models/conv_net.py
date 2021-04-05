@@ -197,7 +197,7 @@ class TwoHeadedConvNet(tf.keras.Model):
 class ConvNet(tf.keras.Model):
     
     def __init__(self, kernel_size, filters, number_actions, loss_name, reg_const=0.001):
-        #tf.keras.backend.set_floatx('float64')
+        tf.keras.backend.set_floatx('float64')
         print('float type:', tf.keras.backend.floatx())
         
         super(ConvNet, self).__init__(name='')

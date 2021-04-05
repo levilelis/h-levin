@@ -88,7 +88,7 @@ class BFSLevin():
 		self._use_heuristic = use_heuristic
 		self._use_learned_heuristic = use_learned_heuristic
 		self._estimated_probability_to_go = estimated_probability_to_go
-		self._k = k_expansions
+		self._k = 1 #k_expansions
 		self._mix_epsilon = mix_epsilon
 
 	def get_levin_cost_star(self, child_node, predicted_h):
@@ -380,6 +380,9 @@ class BFSLevin():
 
 		children_to_be_evaluated = []
 		x_input_of_children_to_be_evaluated = []
+		
+		smallest_largest_value = math.inf
+		first_encountered = None
 
 		while len(_open) > 0:
 			node = heapq.heappop(_open)
@@ -395,7 +398,14 @@ class BFSLevin():
 
 			#if expanded >= budget:
 			if current_levin_cost > budget:  # Trying the older code's strategy
-				return False, None, expanded, generated, puzzle_name, math.ceil(current_levin_cost)  # Returning ceil of levin_cost as new budget
+				
+				if first_encountered is None:
+					first_encountered = current_levin_cost
+				
+				if current_levin_cost < smallest_largest_value:
+					smallest_largest_value = current_levin_cost
+				continue
+# 				return False, None, expanded, generated, puzzle_name, math.ceil(current_levin_cost)  # Returning ceil of levin_cost as new budget
 
 			for a in actions:
 				child = copy.deepcopy(node.get_game_state())
@@ -444,5 +454,7 @@ class BFSLevin():
 
 				children_to_be_evaluated.clear()
 				x_input_of_children_to_be_evaluated.clear()
-		print('Emptied Open List in puzzle: ', puzzle_name)
-		return False, None, expanded, generated, puzzle_name, budget + 1
+		print('Emptied Open List in puzzle: ', puzzle_name, ' next budget: ', math.ceil(smallest_largest_value))
+		
+		return False, None, expanded, generated, puzzle_name, math.ceil(smallest_largest_value)  # Returning ceil of levin_cost as new budget
+	

@@ -937,7 +937,7 @@ class Bootstrap:
 			with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
 				# args = ((state, name, budget, nn_model) for name, state in batch_problems.items())
 				args = ((state, name, state_budget[name], nn_model) for name, state in batch_problems.items())
-				results = executor.map(planner.dfs_search_for_learning, args)  # results = executor.map(planner.search_for_learning, args)
+				results = executor.map(planner.search_for_learning, args)  # results = executor.map(planner.search_for_learning, args)
 			for result in results:
 				has_found_solution = result[0]
 				trajectory = result[1]
@@ -988,7 +988,7 @@ class Bootstrap:
 			while loss > 0.1:
 				#loss = nn_model.train_with_memory(memory)
 				loss = nn_model.train_with_state_action(memory, 1024)
-				print('Loss: ', loss)
+# 				print('Loss: ', loss)
 
 			iteration += 1
 			nn_model.save_weights(join(self._models_folder, 'model_weights'))
