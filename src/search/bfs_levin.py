@@ -19,6 +19,9 @@ class TreeNode:
 		self._parent = parent
 		self._probabilitiy_distribution_a = None
 
+	def __repr__(self):
+		return 'log(pi): ' + str(self._p) + ' depth: ' + str(self._g) + ' levin_cost: ' + str(self._levin_cost)
+
 	def __eq__(self, other):
 		"""
 		Verify if two tree nodes are identical by verifying the
@@ -282,6 +285,60 @@ class BFSLevin():
 
 		return prob
 
+	def dfs_search_for_learning(self, data):
+		state = data[0]
+		puzzle_name = data[1]
+		budget = data[2]
+		nn_model = data[3]
+
+		state.clear_path()
+		node = TreeNode(None, state, 0, 1, 0, -1)  # newer
+		self.results = [False, None, 0, 0, puzzle_name, budget]
+		self.new_bound = -1
+
+		print(puzzle_name, self.results)
+		self.dfs_budget_for_learning(puzzle_name, node, budget, nn_model)
+		print(puzzle_name, self.results)
+		if self.new_bound != -1 and self.results[0] is False:
+			self.results[5] = math.ceil(self.new_bound)
+
+		return self.results
+
+	def dfs_budget_for_learning(self, puzzle_name, node, budget, nn_model):
+		levin_cost = math.log(node.get_g()) - node.get_p()
+		if levin_cost > budget:
+			if self.new_bound == -1 or levin_cost < self.new_bound:
+				self.new_bound = levin_cost
+			return False
+
+		_, action_distribution = nn_model.predict(np.array([node.get_game_state().get_image_representation()]))
+		action_distribution_log = np.log(action_distribution)
+
+		node.set_probability_distribution_actions(action_distribution_log[0])
+
+		actions = node.get_game_state().successors_parent_pruning(node.get_action())
+		probability_distribution_log = node.get_probability_distribution_actions()
+
+		for a in actions:
+			child = copy.deepcopy(node.get_game_state())
+			child.apply_action(a)
+
+			child_node = TreeNode(node, child, node.get_p() + probability_distribution_log[a], node.get_g() + 1, -1, a)
+
+			if child.is_solution():
+				print('Solved puzzle: ', puzzle_name, ' with budget: ', budget, ' exp(d/pi):', math.exp(budget), 'depth:', child_node.get_g())
+				trajectory = self._store_trajectory_memory(child_node, -1)
+				self.results = [True, trajectory, 0, 0, puzzle_name, budget]
+				print(puzzle_name, self.results)
+				return True
+
+			if self.dfs_budget_for_learning(puzzle_name, child_node, budget, nn_model):
+				return True
+
+		return False  # , None, -1, -1, puzzle_name, math.ceil(levin_cost)
+
+
+
 	def search_for_learning(self, data):
 		"""
 		Performs Best-First LTS bounded by a search budget.
@@ -312,7 +369,7 @@ class BFSLevin():
 			(1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1 / action_distribution.shape[1])))
 
 		# node = TreeNode(None, state, 1, 0, 0, -1)  # older
-		node = TreeNode(None, state, 0, 1, 0, -1)  # newer (second 0 is depth which should always start at 1 for levinb_cost calculation)
+		node = TreeNode(None, state, 0, 1, 0, -1)  # newer (second 0 is depth which should always start at 1 for levin_cost calculation)
 		node.set_probability_distribution_actions(action_distribution_log[0])
 
 		heapq.heappush(_open, node)
@@ -325,7 +382,6 @@ class BFSLevin():
 		x_input_of_children_to_be_evaluated = []
 
 		while len(_open) > 0:
-
 			node = heapq.heappop(_open)
 
 			#if expanded > 1:
@@ -350,10 +406,10 @@ class BFSLevin():
 									  a)
 
 				if child.is_solution():
-					print('Solved puzzle: ', puzzle_name, ' expanding ', expanded, ' with budget: ', budget + 1, ' exp(d/pi):', math.exp((budget + 1)), 'depth:', child_node.get_g())
+					print('Solved puzzle: ', puzzle_name, ' expanding ', expanded, ' with budget: ', budget, ' exp(d/pi):', math.exp(budget), 'depth:', child_node.get_g())
 					trajectory = self._store_trajectory_memory(child_node, expanded)
 
-					return True, trajectory, expanded, generated, puzzle_name, budget + 1
+					return True, trajectory, expanded, generated, puzzle_name, budget
 
 				children_to_be_evaluated.append(child_node)
 				x_input_of_children_to_be_evaluated.append(child.get_image_representation())
