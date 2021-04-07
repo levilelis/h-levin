@@ -258,32 +258,34 @@ class BFSLevin():
 		"""
 		state.clear_path()
 
+		parent = None
+		child = state
+		p = 0
+		depth = 1
+		last_action = -1
+
 		for action in path:
-			if self._use_learned_heuristic:
-				_, action_distribution, _ = nn_model.predict(np.array([state.get_image_representation()]))
-			else:
-				_, action_distribution = nn_model.predict(np.array([state.get_image_representation()]))
+			_, action_distribution = nn_model.predict(np.array([child.get_image_representation()]))
+			action_distribution_log = np.log(action_distribution)
 
-			action_distribution_log = np.log(
-				(1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1 / action_distribution.shape[1])))
+			node = TreeNode(parent, child, p, depth, -1, last_action)
 
-			node = TreeNode(None, state, 0, 0, 0, -1)
 			node.set_probability_distribution_actions(action_distribution_log[0])
 			probability_distribution_log = node.get_probability_distribution_actions()
 
 			child = copy.deepcopy(node.get_game_state())
-			print('applying action', action)
 			child.apply_action(action)
-			print(state)
 
-			prob = node.get_p() + probability_distribution_log[action]
-			state = child
-			if child.is_solution():
-				print("SOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+			parent = copy.deepcopy(node)
+			p = node.get_p() + probability_distribution_log[action]
+			# print(p)
+			depth = node.get_g() + 1
+			last_action = action
+			# child_node = TreeNode(node, child, node.get_p() + probability_distribution_log[action], node.get_g() + 1, -1, action)
 
 		state.clear_path()
 
-		return prob
+		return math.exp(p)
 
 	def dfs_search_for_learning(self, data):
 		state = data[0]
@@ -454,7 +456,7 @@ class BFSLevin():
 
 				children_to_be_evaluated.clear()
 				x_input_of_children_to_be_evaluated.clear()
-		print('Emptied Open List in puzzle: ', puzzle_name, ' next budget: ', math.ceil(smallest_largest_value))
+		# print('Emptied Open List in puzzle: ', puzzle_name, ' next budget: ', math.ceil(smallest_largest_value))
 		
 		return False, None, expanded, generated, puzzle_name, math.ceil(smallest_largest_value)  # Returning ceil of levin_cost as new budget
 	
