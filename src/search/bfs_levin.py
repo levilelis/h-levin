@@ -278,10 +278,8 @@ class BFSLevin():
 
 			parent = copy.deepcopy(node)
 			p = node.get_p() + probability_distribution_log[action]
-			# print(p)
 			depth = node.get_g() + 1
 			last_action = action
-			# child_node = TreeNode(node, child, node.get_p() + probability_distribution_log[action], node.get_g() + 1, -1, action)
 
 		state.clear_path()
 
@@ -338,7 +336,6 @@ class BFSLevin():
 				return True
 
 		return False  # , None, -1, -1, puzzle_name, math.ceil(levin_cost)
-
 
 
 	def search_for_learning(self, data):

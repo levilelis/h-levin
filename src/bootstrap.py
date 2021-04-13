@@ -600,7 +600,7 @@ class Bootstrap:
 			iteration += 1
 
 	def get_easiest_worsen_puzzle(self, ordering, previous_probs, current_probs):
-		"""Verifies the puzzle with the highest solution probability that got harder during training, and return it with its probability and position in ordination"""
+		"""Verifies the puzzle with the highest solution probability that got harder during training, and return it with its probability and position in ordering"""
 		easiest_worsen_puzzle = None
 		best_prob = 0
 		position = 0
@@ -636,7 +636,18 @@ class Bootstrap:
 
 		return puzzles_prob
 
-	def _solve_uniform_online_curriculum_selection(self, planner, nn_model, ordering, all_paths):
+	def verify_current_probabilities(self, planner, solutions, nn_model):
+		"""Returns an array with the current probabilities of solution for every puzzle, using the solution path found in the training of the ordering CNN (CNN1)"""
+		puzzles_prob = {}
+		print("Verifying current solution probabilities...")
+		for puzzle in solutions.keys():
+			if puzzle in self._states.keys():
+				current_prob = planner.verify_path_probability(self._states[puzzle], solutions[puzzle], nn_model)
+				puzzles_prob[puzzle] = current_prob
+
+		return puzzles_prob
+
+	def _solve_uniform_online_curriculum_selection(self, planner, nn_model, ordering, solutions):
 		marker = 0  # Used to tell the position of the last selected puzzle on the ordering
 		batch_problems = {}
 		ordered_states = []
@@ -656,9 +667,11 @@ class Bootstrap:
 		for name, state in self._states.items():  # Individual budget list
 			state_budget[name] = self._initial_budget
 
-		for name, pi in ordering:  # Creating ordered puzzle list, according to first ANN
-			previous_probabilities[name] = float(pi)
+		for name, _ in ordering:  # Creating ordered puzzle list, according to first ANN
+			#previous_probabilities[name] = float(pi)
 			ordered_states.append([name, self._states[name]])
+
+		previous_probabilities = self.verify_current_probabilities(planner, solutions, nn_model)  # Verifying with new CNN (CNN2 with random initialization)
 
 		curriculum_puzzles.append(ordered_states[marker][0])  # First puzzle in ordering is the first on the curriculum
 		with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
@@ -673,7 +686,8 @@ class Bootstrap:
 
 		while len(total_current_solved_puzzles) < self._number_problems:
 			if not first_iteration:  # We must train at least once to start using these
-				current_probabilities = self.verify_best_paths(planner, all_paths, nn_model)
+				#current_probabilities = self.verify_best_paths(planner, all_paths, nn_model)
+				current_probabilities = self.verify_current_probabilities(planner, solutions, nn_model)
 				chosen_puzzle, position = self.get_easiest_worsen_puzzle(ordering, previous_probabilities, current_probabilities)
 
 				if chosen_puzzle[0] is not None:
@@ -787,8 +801,6 @@ class Bootstrap:
 				batch_problems = new_batch_problems
 
 				print('Number solved: ', number_solved)
-
-
 
 	def _solve_uniform_online_train_at_end(self, planner, nn_model, states):
 		iteration = 1
@@ -1043,12 +1055,15 @@ class Bootstrap:
 
 				if has_found_solution:
 					memory.add_trajectory(trajectory)
+					solution = reversed(trajectory.get_actions())
 					number_solved += 1
 					current_solved_puzzles.add(puzzle_name)
 					puzzle_solution_pi = trajectory.get_solution_pi()
 					print(puzzle_name, 'pi:', puzzle_solution_pi)
 					with open(join(self._log_folder + 'training_bootstrap_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
-						result_file.write("{:s}, {:e}, {:d}".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
+						result_file.write("{:s}, {:e}, {:d}, ".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
+						for action in solution:
+							result_file.write(("{:d} ".format(action)))
 						result_file.write('\n')
 
 					if 'witness' in puzzle_name:
@@ -1083,7 +1098,7 @@ class Bootstrap:
 			while loss > 0.1:
 				#loss = nn_model.train_with_memory(memory)
 				loss = nn_model.train_with_state_action(memory, 1024)
-# 				print('Loss: ', loss)
+				print('Loss: ', loss)
 
 			iteration += 1
 			nn_model.save_weights(join(self._models_folder, 'model_weights'))

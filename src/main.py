@@ -222,16 +222,27 @@ def main():
 	states = {}
 	ordering = None
 	all_paths = None
+	solutions = None
 
 	if parameters.ordering_file:  # Used for --learn-curriculum, result of the first Neural Network training
 		with open(parameters.ordering_file, 'r') as file:
 			ordering = []
+			solutions = {}
 			lines = file.readlines()
 			for line in lines:
 				line_split = line.strip().split(', ')
 				puzzle = line_split[0]
 				pi = line_split[1]
+				path = line_split[3]
 				ordering.append([puzzle, pi])
+
+				actions = path.split(' ')
+				actions = actions[1:len(actions)-1]
+				solution = []
+				for action in actions:
+					solution.append(int(action))
+				solutions[puzzle] = solution
+
 
 	if parameters.all_paths_file:  # Used for --learn-curriculum
 		all_paths = {}
@@ -373,7 +384,8 @@ def main():
 
 			if parameters.learning_mode:
 #                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
-				bootstrap.solve_problems(bfs_planner, nn_model, ordering, all_paths)
+				# bootstrap.solve_problems(bfs_planner, nn_model, ordering, all_paths)
+				bootstrap.solve_problems(bfs_planner, nn_model, ordering, solutions)
 			elif parameters.blind_search:
 				search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
 			else:
