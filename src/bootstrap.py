@@ -673,6 +673,14 @@ class Bootstrap:
 
 		previous_probabilities = self.verify_current_probabilities(planner, solutions, nn_model)  # Verifying with new CNN (CNN2 with random initialization)
 
+		# Using this to test how the probabilities of puzzle 2x2_269 and his reflections (2x2_152, 2x2_257, 2x2_104) are moving during this process
+		with open(join(self._log_folder + self._model_name + '_2x2_269_reflections_probs'), 'a') as result_file:
+							result_file.write("2x2_269: {:e}\n".format(previous_probabilities['2x2_269']))
+							result_file.write("2x2_152: {:e}\n".format(previous_probabilities['2x2_152']))
+							result_file.write("2x2_257: {:e}\n".format(previous_probabilities['2x2_257']))
+							result_file.write("2x2_104: {:e}\n".format(previous_probabilities['2x2_104']))
+							result_file.write("\n")
+
 		curriculum_puzzles.append(ordered_states[marker][0])  # First puzzle in ordering is the first on the curriculum
 		with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
 							result_file.write("{:s}".format(ordered_states[0][0]))
@@ -689,6 +697,14 @@ class Bootstrap:
 				#current_probabilities = self.verify_best_paths(planner, all_paths, nn_model)
 				current_probabilities = self.verify_current_probabilities(planner, solutions, nn_model)
 				chosen_puzzle, position = self.get_easiest_worsen_puzzle(ordering, previous_probabilities, current_probabilities)
+
+				# Using this to test how the probabilities of puzzle 2x2_269 and his reflections (2x2_152, 2x2_257, 2x2_104) are moving during this process
+				with open(join(self._log_folder + self._model_name + '_2x2_269_reflections_probs'), 'a') as result_file:
+									result_file.write("2x2_269: {:e}\n".format(current_probabilities['2x2_269']))
+									result_file.write("2x2_152: {:e}\n".format(current_probabilities['2x2_152']))
+									result_file.write("2x2_257: {:e}\n".format(current_probabilities['2x2_257']))
+									result_file.write("2x2_104: {:e}\n".format(current_probabilities['2x2_104']))
+									result_file.write("\n")
 
 				if chosen_puzzle[0] is not None:
 						print("Chosen Puzzle is", chosen_puzzle[0])

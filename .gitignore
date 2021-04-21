@@ -1,7 +1,7 @@
 .DS_Store
 .project
 .pydevproject
-
+.idea
 */__pycache__/*
 __pycache__
 logs/
