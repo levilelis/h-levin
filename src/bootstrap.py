@@ -647,6 +647,16 @@ class Bootstrap:
 
 		return puzzles_prob
 
+	def test_current_probs(self, test_states, planner, solutions, nn_model):
+		puzzles_prob = {}
+		print("Verifying current solution probabilities...")
+		for puzzle in solutions.keys():
+			if puzzle in test_states.keys():
+				current_prob = planner.verify_path_probability(test_states[puzzle], solutions[puzzle], nn_model)
+				puzzles_prob[puzzle] = current_prob
+
+		return puzzles_prob
+
 	def _solve_uniform_online_curriculum_selection(self, planner, nn_model, ordering, solutions):
 		marker = 0  # Used to tell the position of the last selected puzzle on the ordering
 		batch_problems = {}
@@ -674,12 +684,17 @@ class Bootstrap:
 		previous_probabilities = self.verify_current_probabilities(planner, solutions, nn_model)  # Verifying with new CNN (CNN2 with random initialization)
 
 		# Using this to test how the probabilities of puzzle 2x2_269 and his reflections (2x2_152, 2x2_257, 2x2_104) are moving during this process
+		test_states = {}
+		test_states['2x2_269'] = self._states['2x2_269']
+		test_states['2x2_152'] = self._states['2x2_152']
+		test_states['2x2_257'] = self._states['2x2_257']
+		test_states['2x2_104'] = self._states['2x2_104']
 		with open(join(self._log_folder + self._model_name + '_2x2_269_reflections_probs'), 'a') as result_file:
-							result_file.write("2x2_269: {:e}\n".format(previous_probabilities['2x2_269']))
-							result_file.write("2x2_152: {:e}\n".format(previous_probabilities['2x2_152']))
-							result_file.write("2x2_257: {:e}\n".format(previous_probabilities['2x2_257']))
-							result_file.write("2x2_104: {:e}\n".format(previous_probabilities['2x2_104']))
-							result_file.write("\n")
+				result_file.write("2x2_269: {:e}\n".format(previous_probabilities['2x2_269']))
+				result_file.write("2x2_152: {:e}\n".format(previous_probabilities['2x2_152']))
+				result_file.write("2x2_257: {:e}\n".format(previous_probabilities['2x2_257']))
+				result_file.write("2x2_104: {:e}\n".format(previous_probabilities['2x2_104']))
+				result_file.write("\n")
 
 		curriculum_puzzles.append(ordered_states[marker][0])  # First puzzle in ordering is the first on the curriculum
 		with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
@@ -699,18 +714,25 @@ class Bootstrap:
 				chosen_puzzle, position = self.get_easiest_worsen_puzzle(ordering, previous_probabilities, current_probabilities)
 
 				# Using this to test how the probabilities of puzzle 2x2_269 and his reflections (2x2_152, 2x2_257, 2x2_104) are moving during this process
+				test_probs = self.test_current_probs(test_states, planner, solutions, nn_model)
 				with open(join(self._log_folder + self._model_name + '_2x2_269_reflections_probs'), 'a') as result_file:
-									result_file.write("2x2_269: {:e}\n".format(current_probabilities['2x2_269']))
-									result_file.write("2x2_152: {:e}\n".format(current_probabilities['2x2_152']))
-									result_file.write("2x2_257: {:e}\n".format(current_probabilities['2x2_257']))
-									result_file.write("2x2_104: {:e}\n".format(current_probabilities['2x2_104']))
-									result_file.write("\n")
+						result_file.write("2x2_269: {:e}\n".format(test_probs['2x2_269']))
+						result_file.write("2x2_152: {:e}\n".format(test_probs['2x2_152']))
+						result_file.write("2x2_257: {:e}\n".format(test_probs['2x2_257']))
+						result_file.write("2x2_104: {:e}\n".format(test_probs['2x2_104']))
+						result_file.write("\n")
 
 				if chosen_puzzle[0] is not None:
+						x = ['2x2_269', '2x2_152', '2x2_257', '2x2_104']
 						print("Chosen Puzzle is", chosen_puzzle[0])
 						print("Previous Prob:", previous_probabilities[chosen_puzzle[0]])
 						print("Current Prob:", chosen_puzzle[1])
 						curriculum_puzzles.append(chosen_puzzle)
+
+						if chosen_puzzle[0] in x:
+							# Using this to test how the probabilities of puzzle 2x2_269 and his reflections (2x2_152, 2x2_257, 2x2_104) are moving during this process
+							with open(join(self._log_folder + self._model_name + '_2x2_269_reflections_probs'), 'a') as result_file:
+								result_file.write("{:s}: {:e} (chosen)\n".format(chosen_puzzle[0], chosen_puzzle[1]))
 
 						with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
 									result_file.write("{:s}".format(chosen_puzzle[0]))
