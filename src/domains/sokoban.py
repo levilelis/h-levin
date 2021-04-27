@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 from domains.environment import Environment
 
@@ -274,3 +276,43 @@ class Sokoban(Environment):
                 else:
                     print(' ', end='')
             print()
+
+    def rotate90(self):
+        matrix = np.zeros((self._height, self._width))
+        matrix[self._y_man][self._x_man] = 1
+        matrix = np.rot90(matrix)
+        pos = np.argwhere(matrix == 1)
+
+        self._x_man = pos[0][1]
+        self._y_man = pos[0][0]
+
+        self._maze = np.rot90(self._maze)
+        self._boxes = np.rot90(self._boxes)
+
+        self.print()
+
+    def flip_up_down(self):
+        matrix = np.zeros((self._height, self._width))
+        matrix[self._y_man][self._x_man] = 1
+        matrix = np.flipud(matrix)
+        pos = np.argwhere(matrix == 1)
+
+        self._x_man = pos[0][1]
+        self._y_man = pos[0][0]
+
+        self._maze = np.flipud(self._maze)
+        self._boxes = np.flipud(self._boxes)
+
+        self.print()
+
+    def get_rotate90_action(self, action):
+        #E = 0, W = 1, N = 2, S = 3
+        #mapping: E -> S (0 -> 3); S -> W (3 -> 1); W -> N (1 -> 2); N -> E (2 -> 0)
+        mapping_actions = {0:3, 3:1, 1:2, 2:0}
+        return mapping_actions[action]
+
+    def get_flip_up_down_action(self, action):
+        #E = 0, W = 1, N = 2, S = 3
+        #mapping: E -> E (0 -> 0); N -> S (2 -> 3); W -> W (1 -> 1); S -> N (3 -> 2)
+        mapping_actions = {0:0, 2:3, 1:1, 3:2}
+        return mapping_actions[action]

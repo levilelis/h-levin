@@ -4,6 +4,9 @@ import random
 import numpy as np
 import sys
 
+from domains.witness import WitnessState
+
+
 class Trajectory():
     def __init__(self, states, actions, solution_costs, expanded, solution_pi=0.0):
         self._states = states
@@ -105,7 +108,7 @@ class Memory():
                         if flip:
                             r_state.flip_up_down()
                             a = r_state.get_flip_up_down_action(a)
-                        if swap:
+                        if swap and isinstance(r_state, WitnessState):
                             r_state.swap_colors()
                         self._preprocessed_pairs.append([r_state, a])
         self.clear()
