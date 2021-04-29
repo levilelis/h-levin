@@ -7,7 +7,7 @@ class KerasModel():
         self.mutex = Lock()
         self.model = None
 
-    def initialize(self, loss_name, search_algorithm, two_headed_model=False):
+    def initialize(self, loss_name, search_algorithm, domain='Witness', two_headed_model=False):
         if (search_algorithm == 'Levin' 
             or search_algorithm == 'LevinMult' 
             or search_algorithm == 'LevinStar' 
@@ -15,7 +15,7 @@ class KerasModel():
             if two_headed_model:
                 self.model = TwoHeadedConvNet((2, 2), 32, 4, loss_name)
             else:
-                self.model = ConvNet((2, 2), 32, 4, loss_name)
+                self.model = ConvNet((2, 2), 32, 4, loss_name, domain)
         if search_algorithm == 'AStar' or search_algorithm == 'GBFS':
                 self.model = HeuristicConvNet((2, 2), 32, 4)
                 

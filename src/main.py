@@ -385,7 +385,7 @@ def main():
 				if parameters.use_learned_heuristic:
 					nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=True)
 				else:
-					nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
+					nn_model.initialize(parameters.loss_function, parameters.search_algorithm, domain=parameters.problem_domain, two_headed_model=False)
 
 				if parameters.learning_mode:
 	#                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)

@@ -196,7 +196,7 @@ class TwoHeadedConvNet(tf.keras.Model):
 
 class ConvNet(tf.keras.Model):
     
-    def __init__(self, kernel_size, filters, number_actions, loss_name, reg_const=0.001):
+    def __init__(self, kernel_size, filters, number_actions, loss_name, domain, reg_const=0.001):
         tf.keras.backend.set_floatx('float64')
         print('float type:', tf.keras.backend.floatx())
         
@@ -209,6 +209,7 @@ class ConvNet(tf.keras.Model):
         self._filters = filters
         self._number_actions = number_actions
         self._loss_name = loss_name
+        self._domain = domain
         
         self.conv1 = tf.keras.layers.Conv2D(filters, 
                                             kernel_size, 
@@ -228,19 +229,35 @@ class ConvNet(tf.keras.Model):
         self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='pool2', dtype='float64')
         self.flatten = tf.keras.layers.Flatten(name='flatten1', dtype='float64')
         # Was 128 dense
-        self.dense1 = tf.keras.layers.Dense(2048,
-                                            name='dense1', 
-                                            activation='relu', 
+        if domain == 'Sokoban':
+            self.dense1 = tf.keras.layers.Dense(256,
+                                            name='dense1',
+                                            activation='relu',
                                             dtype='float64',
                                             kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(3 * 3 * 64)),  # equivalent to old code
                                             bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
+        else:  # For Witness
+            self.dense1 = tf.keras.layers.Dense(2048,
+                                                name='dense1',
+                                                activation='relu',
+                                                dtype='float64',
+                                                kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(3 * 3 * 64)),  # equivalent to old code
+                                                bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
         self.drop1 = tf.keras.layers.Dropout(0.5)  # testing
-        self.dense2 = tf.keras.layers.Dense(2048,
+        if domain == 'Sokoban':
+            self.dense2 = tf.keras.layers.Dense(256,
                                             name='dense2',
                                             activation='relu',
                                             dtype='float64',
                                             kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(2048)),  # equivalent to old code
                                             bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
+        else:  # For Witness
+            self.dense2 = tf.keras.layers.Dense(2048,
+                                                name='dense2',
+                                                activation='relu',
+                                                dtype='float64',
+                                                kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(2048)),  # equivalent to old code
+                                                bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
         self.dense3 = tf.keras.layers.Dense(number_actions,
                                             name='dense3',
                                             dtype='float64')
