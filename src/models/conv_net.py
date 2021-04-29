@@ -249,7 +249,7 @@ class ConvNet(tf.keras.Model):
                                             name='dense2',
                                             activation='relu',
                                             dtype='float64',
-                                            kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(2048)),  # equivalent to old code
+                                            kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(256)),  # equivalent to old code
                                             bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
         else:  # For Witness
             self.dense2 = tf.keras.layers.Dense(2048,
