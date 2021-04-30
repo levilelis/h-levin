@@ -6,6 +6,9 @@ from models.memory import Memory
 from concurrent.futures.process import ProcessPoolExecutor
 import heapq
 import math
+from models.model_wrapper import KerasManager, KerasModel
+from search.bfs_levin import TreeNode
+import numpy as np
 
 class ProblemNode:
 	def __init__(self, k, n, name, instance):
@@ -507,98 +510,6 @@ class Bootstrap:
 																				 end-start)))
 				results_file.write('\n')
 
-	def _solve_uniform_online_curriculum_selectionx(self, planner, nn_model, ordering):
-		iteration = 1
-		total_expanded = 0
-		total_generated = 0
-
-		budget = self._initial_budget
-		memory = Memory()
-		start = time.time()
-
-		current_solved_puzzles = set()
-
-		marker = 0
-		self._batch_size = 1
-		batch_problems = {}
-		ordered_states = []
-		curriculum_puzzles = []
-
-		self._puzzles_probabilities = {}
-		for name, pi in ordering:
-			self._puzzles_probabilities[name] = [pi, 0]
-			ordered_states.append([name, self._states[name]])
-
-		curriculum_puzzles.append(ordered_states[0][0])  # First puzzle in ordering is the first on the curriculum
-
-		while len(current_solved_puzzles) < self._number_problems:
-			number_solved = 0
-
-			for name, state in ordered_states:
-
-				batch_problems[name] = state
-
-				if len(batch_problems) < self._batch_size and self._number_problems - len(current_solved_puzzles) > self._batch_size:
-					continue
-
-				with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
-					args = ((state, name, budget, nn_model) for name, state in batch_problems.items())
-					results = executor.map(planner.search_for_learning, args)
-				for result in results:
-					has_found_solution = result[0]
-					trajectory = result[1]
-					total_expanded += result[2]
-					total_generated += result[3]
-					puzzle_name = result[4]
-
-					if has_found_solution:
-						memory.add_trajectory(trajectory)
-
-					if has_found_solution and puzzle_name not in current_solved_puzzles:
-						number_solved += 1
-						current_solved_puzzles.add(puzzle_name)
-						puzzle_solution_pi = trajectory.get_solution_pi()
-						self._puzzles_probabilities[puzzle_name][1] = puzzle_solution_pi
-
-					batch_problems.clear()
-
-			if memory.number_trajectories() > 0:
-				for _ in range(self._gradient_steps):
-					loss = nn_model.train_with_memory(memory)
-					print('Loss: ', loss)
-				memory.clear()
-				nn_model.save_weights(join(self._models_folder, 'model_weights'))
-
-			end = time.time()
-			with open(join(self._log_folder + 'training_bootstrap_' + self._model_name), 'a') as results_file:
-				results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(iteration,
-																				 number_solved,
-																				 self._number_problems - len(current_solved_puzzles),
-																				 budget,
-																				 total_expanded,
-																				 total_generated,
-																				 end-start)))
-				results_file.write('\n')
-
-			print(self._puzzles_probabilities)
-
-			for name, _ in self._states.items():
-				self._puzzles_probabilities[name][0] = self._puzzles_probabilities[name][1]
-				self._puzzles_probabilities[name][1] = 0
-
-			last_pos = marker
-			marker += 4
-
-			self._batch_size = marker - last_pos
-
-			print('Number solved: ', number_solved)
-			if number_solved == 0:
-				budget *= 2
-				print('Budget: ', budget)
-				continue
-
-			iteration += 1
-
 	def get_easiest_worsen_puzzle(self, ordering, previous_probs, current_probs):
 		"""Verifies the puzzle with the highest solution probability that got harder during training, and return it with its probability and position in ordering"""
 		easiest_worsen_puzzle = None
@@ -636,13 +547,48 @@ class Bootstrap:
 
 		return puzzles_prob
 
-	def verify_current_probabilities(self, planner, solutions, nn_model):
+	def verify_path_probability(self, state, path, nn_model):
+		"""
+		This function receives a puzzle state and one of its solution paths and checks the probability (prob)
+		of the current policy solving that instance.
+		Calculated by the productory of probabilities of actions in path.
+		"""
+		state.clear_path()
+
+		parent = None
+		child = state
+		p = 0
+		depth = 1
+		last_action = -1
+
+		for action in path:
+			_, action_distribution = nn_model.predict(np.array([child.get_image_representation()]))
+			action_distribution_log = np.log(action_distribution)
+
+			node = TreeNode(parent, child, p, depth, -1, last_action)
+
+			node.set_probability_distribution_actions(action_distribution_log[0])
+			probability_distribution_log = node.get_probability_distribution_actions()
+
+			child = copy.deepcopy(node.get_game_state())
+			child.apply_action(action)
+
+			parent = copy.deepcopy(node)
+			p = node.get_p() + probability_distribution_log[action]
+			depth = node.get_g() + 1
+			last_action = action
+
+		state.clear_path()
+
+		return math.exp(p)
+
+	def verify_current_probabilities(self, solutions, nn_model):
 		"""Returns an array with the current probabilities of solution for every puzzle, using the solution path found in the training of the ordering CNN (CNN1)"""
 		puzzles_prob = {}
 		print("Verifying current solution probabilities...")
 		for puzzle in solutions.keys():
 			if puzzle in self._states.keys():
-				current_prob = planner.verify_path_probability(self._states[puzzle], solutions[puzzle], nn_model)
+				current_prob = self.verify_path_probability(self._states[puzzle], solutions[puzzle], nn_model)
 				puzzles_prob[puzzle] = current_prob
 
 		return puzzles_prob
@@ -656,6 +602,93 @@ class Bootstrap:
 				puzzles_prob[puzzle] = current_prob
 
 		return puzzles_prob
+
+	def _curriculum_selection_only(self, nn_model, ordering, solutions, trajectories):
+		print("STARTING CURRICULUM SELECTION!")
+		marker = 0  # Used to tell the position of the last selected puzzle on the ordering
+		batch_problems = {}
+		curriculum_puzzles = []
+		trained_puzzles = set()
+
+		iteration = 1
+		memory = Memory()
+
+		previous_probabilities = self.verify_current_probabilities(solutions, nn_model)  # Verifying with new CNN (CNN2 with random initialization)
+
+		curriculum_puzzles.append(ordering[marker][0])  # First puzzle in ordering is the first on the curriculum
+		with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
+							result_file.write("{:s}".format(ordering[0][0]))
+							result_file.write('\n')
+
+		puzzle_file = ordering[marker][0]  # First train only with first puzzle
+		batch_problems[puzzle_file] = self._states[puzzle_file]
+		first_iteration = True
+		del self._states[puzzle_file]  # Clear dictionary of the states that were already solved
+		del previous_probabilities[puzzle_file]
+
+		while len(trained_puzzles) < self._number_problems:
+			if not first_iteration:  # We must train at least once to start using these
+				current_probabilities = self.verify_current_probabilities(solutions, nn_model)
+				chosen_puzzle, position = self.get_easiest_worsen_puzzle(ordering, previous_probabilities, current_probabilities)
+
+				if chosen_puzzle[0] is not None:
+						print("Chosen Puzzle is", chosen_puzzle[0])
+						print("Previous Prob:", previous_probabilities[chosen_puzzle[0]])
+						print("Current Prob:", chosen_puzzle[1])
+						curriculum_puzzles.append(chosen_puzzle)
+
+						with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
+									result_file.write("{:s}".format(chosen_puzzle[0]))
+									result_file.write('\n')
+
+						puzzles = ordering[marker+1:position+1]
+						batch_problems = {}
+						for p, _ in puzzles:
+							batch_problems[p] = self._states[p]
+
+						print("Training with", batch_problems.keys())
+
+						marker = position
+						previous_probabilities = copy.deepcopy(current_probabilities)
+
+						for p in batch_problems.keys():  # Clear dictionary of the states that were already solved
+							del self._states[p]
+							del previous_probabilities[p]
+
+				else:  # Trains again with only the next puzzle in ordering
+					print("No puzzle was chosen in this iteration")
+					marker += 1
+					if marker >= len(ordering):
+						break
+					puzzle_file = ordering[marker][0]
+					batch_problems = {puzzle_file: self._states[puzzle_file]}
+					print("Training with", puzzle_file)
+					del self._states[puzzle_file]  # Clear dictionary of the states that were already solved
+					del previous_probabilities[puzzle_file]
+
+			first_iteration = False
+			current_solved_puzzles = set()
+
+			for p in batch_problems.keys():
+				trained_puzzles.add(p)
+				memory.add_trajectory(trajectories[p])
+
+			memory.preprocess_data()
+			print('preprocessed pairs:', len(memory.get_preprocessed_pairs()))
+			loss = 1
+			while loss > 0.1:
+				loss = nn_model.train_with_state_action(memory, 1024)
+				print('Loss: ', loss)
+
+			iteration += 1
+			nn_model.save_weights(join(self._models_folder, 'model_weights'))
+
+			new_batch_problems = {}
+			for p in batch_problems.keys():  # Create a new training batch without puzzles already solved
+				if p not in current_solved_puzzles:
+					new_batch_problems[p] = batch_problems[p]
+
+			batch_problems = new_batch_problems
 
 	def _solve_uniform_online_curriculum_selection(self, planner, nn_model, ordering, solutions):
 		marker = 0  # Used to tell the position of the last selected puzzle on the ordering
@@ -684,7 +717,7 @@ class Bootstrap:
 		previous_probabilities = self.verify_current_probabilities(planner, solutions, nn_model)  # Verifying with new CNN (CNN2 with random initialization)
 
 		# Using this to test how the probabilities of puzzle 2x2_269 and his reflections (2x2_152, 2x2_257, 2x2_104) are moving during this process
-		test_states = {}
+		"""test_states = {}
 		test_states['2x2_269'] = self._states['2x2_269']
 		test_states['2x2_152'] = self._states['2x2_152']
 		test_states['2x2_257'] = self._states['2x2_257']
@@ -694,7 +727,7 @@ class Bootstrap:
 				result_file.write("2x2_152: {:e}\n".format(previous_probabilities['2x2_152']))
 				result_file.write("2x2_257: {:e}\n".format(previous_probabilities['2x2_257']))
 				result_file.write("2x2_104: {:e}\n".format(previous_probabilities['2x2_104']))
-				result_file.write("\n")
+				result_file.write("\n")"""
 
 		curriculum_puzzles.append(ordered_states[marker][0])  # First puzzle in ordering is the first on the curriculum
 		with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
@@ -714,25 +747,25 @@ class Bootstrap:
 				chosen_puzzle, position = self.get_easiest_worsen_puzzle(ordering, previous_probabilities, current_probabilities)
 
 				# Using this to test how the probabilities of puzzle 2x2_269 and his reflections (2x2_152, 2x2_257, 2x2_104) are moving during this process
-				test_probs = self.test_current_probs(test_states, planner, solutions, nn_model)
+				"""test_probs = self.test_current_probs(test_states, planner, solutions, nn_model)
 				with open(join(self._log_folder + self._model_name + '_2x2_269_reflections_probs'), 'a') as result_file:
 						result_file.write("2x2_269: {:e}\n".format(test_probs['2x2_269']))
 						result_file.write("2x2_152: {:e}\n".format(test_probs['2x2_152']))
 						result_file.write("2x2_257: {:e}\n".format(test_probs['2x2_257']))
 						result_file.write("2x2_104: {:e}\n".format(test_probs['2x2_104']))
-						result_file.write("\n")
+						result_file.write("\n")"""
 
 				if chosen_puzzle[0] is not None:
-						x = ['2x2_269', '2x2_152', '2x2_257', '2x2_104']
+						# x = ['2x2_269', '2x2_152', '2x2_257', '2x2_104']
 						print("Chosen Puzzle is", chosen_puzzle[0])
 						print("Previous Prob:", previous_probabilities[chosen_puzzle[0]])
 						print("Current Prob:", chosen_puzzle[1])
 						curriculum_puzzles.append(chosen_puzzle)
 
-						if chosen_puzzle[0] in x:
+						"""if chosen_puzzle[0] in x:
 							# Using this to test how the probabilities of puzzle 2x2_269 and his reflections (2x2_152, 2x2_257, 2x2_104) are moving during this process
 							with open(join(self._log_folder + self._model_name + '_2x2_269_reflections_probs'), 'a') as result_file:
-								result_file.write("{:s}: {:e} (chosen)\n".format(chosen_puzzle[0], chosen_puzzle[1]))
+								result_file.write("{:s}: {:e} (chosen)\n".format(chosen_puzzle[0], chosen_puzzle[1]))"""
 
 						with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
 									result_file.write("{:s}".format(chosen_puzzle[0]))
@@ -1060,6 +1093,11 @@ class Bootstrap:
 		number_solved = 0
 		total_expanded = 0
 		total_generated = 0
+		
+		# The next three are used on curriculum selection after this training
+		trajectories = {}
+		solutions = {}
+		ordering = []
 
 		budget = self._initial_budget
 		memory = Memory()
@@ -1097,6 +1135,12 @@ class Bootstrap:
 					number_solved += 1
 					current_solved_puzzles.add(puzzle_name)
 					puzzle_solution_pi = trajectory.get_solution_pi()
+
+					# The next three are used on curriculum selection after this training
+					trajectories[puzzle_name] = trajectory
+					solutions[puzzle_name] = solution
+					ordering.append([puzzle_name, self._states[puzzle_name]])
+
 					print(puzzle_name, 'pi:', puzzle_solution_pi)
 					with open(join(self._log_folder + 'training_bootstrap_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
 						result_file.write("{:s}, {:e}, {:d}, ".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
@@ -1122,7 +1166,6 @@ class Bootstrap:
 				results_file.write('\n')
 
 			if number_solved != 0:
-				# budget = self._initial_budget
 				for name, state in self._states.items():  # Resetting budget after train
 					state_budget[name] = self._initial_budget
 			else:  # If none solved, skip training
@@ -1130,11 +1173,8 @@ class Bootstrap:
 
 			memory.preprocess_data()
 			print('preprocessed pairs:', len(memory.get_preprocessed_pairs()))
-			#if memory.number_trajectories() > 0:
-				#for _ in range(self._gradient_steps):
 			loss = 1
 			while loss > 0.1:
-				#loss = nn_model.train_with_memory(memory)
 				loss = nn_model.train_with_state_action(memory, 1024)
 				print('Loss: ', loss)
 
@@ -1143,19 +1183,19 @@ class Bootstrap:
 			batch_problems.clear()
 
 			print('Number solved: ', number_solved)
-			"""if number_solved == 0:
-				#budget *= 2
-				budget += 1  # Trying the older code's strategy
-				print('Budget: ', budget)
-				continue
-			else:"""
-			"""if number_solved != 0:
-				# budget = self._initial_budget
-				for name, state in self._states.items():  # Resetting budget after train
-					state_budget[name] = self._initial_budget
-			iteration += 1"""
 
-	def solve_problems(self, planner, nn_model, ordering=None, all_paths=None):
+		# Used for, after training and having the ordering, train a new ANN to select the curriculum puzzles
+		ordering_and_selection = True
+		if ordering_and_selection:
+			KerasManager.register('KerasModel', KerasModel)
+			with KerasManager() as manager:
+				nn_model_selector = manager.KerasModel()
+				nn_model_selector.initialize('CrossEntropyLoss', 'Levin', domain='Witness', two_headed_model=False)
+
+				self._curriculum_selection_only(nn_model_selector, ordering, solutions, trajectories)
+
+
+	def solve_problems(self, planner, nn_model, ordering=None, solutions=None):
 		if self._scheduler == 'gbs':
 			self._solve_gbs(planner, nn_model)
 		elif self._scheduler == 'online':
@@ -1163,7 +1203,7 @@ class Bootstrap:
 		elif self._scheduler == 'pgbs':
 			self._parallel_gbs(planner, nn_model)
 		elif self._scheduler == 'curriculum':
-			self._solve_uniform_online_curriculum_selection(planner, nn_model, ordering, all_paths)
+			self._solve_uniform_online_curriculum_selection(planner, nn_model, ordering, solutions)
 		elif self._scheduler == 'aggregated':
 			self._solve_aggregated_online(planner, nn_model)
 		else:
