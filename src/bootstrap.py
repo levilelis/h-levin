@@ -1185,8 +1185,7 @@ class Bootstrap:
 			print('Number solved: ', number_solved)
 
 		# Used for, after training and having the ordering, train a new ANN to select the curriculum puzzles
-		ordering_and_selection = True
-		if ordering_and_selection:
+		if nn_model.get_domain() == 'Witness':
 			KerasManager.register('KerasModel', KerasModel)
 			with KerasManager() as manager:
 				nn_model_selector = manager.KerasModel()

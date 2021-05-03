@@ -35,5 +35,9 @@ class KerasModel():
     def load_weights(self, filepath):
         self.model.load_weights(filepath).expect_partial()
 
+    def get_domain(self):
+        return self.model.get_domain()
+
+
 class KerasManager(BaseManager):
     pass
