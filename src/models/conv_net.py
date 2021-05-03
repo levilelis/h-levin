@@ -229,7 +229,7 @@ class ConvNet(tf.keras.Model):
         self.pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='pool2', dtype='float64')
         self.flatten = tf.keras.layers.Flatten(name='flatten1', dtype='float64')
         # Was 128 dense
-        if domain == 'Sokoban':
+        if self._domain == 'Sokoban':
             self.dense1 = tf.keras.layers.Dense(256,
                                             name='dense1',
                                             activation='relu',
@@ -244,7 +244,7 @@ class ConvNet(tf.keras.Model):
                                                 kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=1/math.sqrt(3 * 3 * 64)),  # equivalent to old code
                                                 bias_initializer=tf.keras.initializers.Constant(value=0.01))  # equivalent to tf.constant(0.01, shape=shape) from old code
         self.drop1 = tf.keras.layers.Dropout(0.5)  # testing
-        if domain == 'Sokoban':
+        if self._domain == 'Sokoban':
             self.dense2 = tf.keras.layers.Dense(256,
                                             name='dense2',
                                             activation='relu',
@@ -378,3 +378,6 @@ class ConvNet(tf.keras.Model):
     
     def get_number_actions(self):
         return self._number_actions
+
+    def get_domain(self):
+        return self._domain
