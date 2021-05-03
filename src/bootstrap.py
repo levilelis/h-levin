@@ -575,6 +575,7 @@ class Bootstrap:
 
 			parent = copy.deepcopy(node)
 			p = node.get_p() + probability_distribution_log[action]
+			print('p:', p)
 			depth = node.get_g() + 1
 			last_action = action
 
@@ -614,7 +615,6 @@ class Bootstrap:
 		memory = Memory()
 
 		previous_probabilities = self.verify_current_probabilities(solutions, nn_model)  # Verifying with new CNN (CNN2 with random initialization)
-
 		curriculum_puzzles.append(ordering[marker][0])  # First puzzle in ordering is the first on the curriculum
 		with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
 							result_file.write("{:s}".format(ordering[0][0]))
@@ -630,7 +630,7 @@ class Bootstrap:
 			if not first_iteration:  # We must train at least once to start using these
 				current_probabilities = self.verify_current_probabilities(solutions, nn_model)
 				chosen_puzzle, position = self.get_easiest_worsen_puzzle(ordering, previous_probabilities, current_probabilities)
-
+				print(current_probabilities)
 				if chosen_puzzle[0] is not None:
 						print("Chosen Puzzle is", chosen_puzzle[0])
 						print("Previous Prob:", previous_probabilities[chosen_puzzle[0]])
@@ -1093,7 +1093,7 @@ class Bootstrap:
 		number_solved = 0
 		total_expanded = 0
 		total_generated = 0
-		
+
 		# The next three are used on curriculum selection after this training
 		trajectories = {}
 		solutions = {}
@@ -1131,7 +1131,7 @@ class Bootstrap:
 
 				if has_found_solution:
 					memory.add_trajectory(trajectory)
-					solution = reversed(trajectory.get_actions())
+					solution = list(reversed(trajectory.get_actions()))
 					number_solved += 1
 					current_solved_puzzles.add(puzzle_name)
 					puzzle_solution_pi = trajectory.get_solution_pi()
