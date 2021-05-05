@@ -575,7 +575,6 @@ class Bootstrap:
 
 			parent = copy.deepcopy(node)
 			p = node.get_p() + probability_distribution_log[action]
-			print('p:', p)
 			depth = node.get_g() + 1
 			last_action = action
 
@@ -583,14 +582,28 @@ class Bootstrap:
 
 		return math.exp(p)
 
+	def mult_verify_current_probabilities(self, solutions, models):
+		"""Returns an array with the current average probabilities of solution for every puzzle between each model, using the solution path found in the training of the ordering CNN (CNN1)"""
+		puzzles_prob = {}
+		print("Verifying current average solution probabilities for the", len(models), "models ...")
+		for puzzle in self._states.keys():
+			sum_probs = 0
+			for model in models:
+				prob = self.verify_path_probability(self._states[puzzle], solutions[puzzle], model)
+				sum_probs += prob
+			avg_prob = sum_probs/len(models)
+			puzzles_prob[puzzle] = avg_prob
+
+		return puzzles_prob
+
 	def verify_current_probabilities(self, solutions, nn_model):
 		"""Returns an array with the current probabilities of solution for every puzzle, using the solution path found in the training of the ordering CNN (CNN1)"""
 		puzzles_prob = {}
 		print("Verifying current solution probabilities...")
-		for puzzle in solutions.keys():
-			if puzzle in self._states.keys():
-				current_prob = self.verify_path_probability(self._states[puzzle], solutions[puzzle], nn_model)
-				puzzles_prob[puzzle] = current_prob
+		#for puzzle in solutions.keys():
+		for puzzle in self._states.keys():
+			current_prob = self.verify_path_probability(self._states[puzzle], solutions[puzzle], nn_model)
+			puzzles_prob[puzzle] = current_prob
 
 		return puzzles_prob
 
@@ -604,7 +617,19 @@ class Bootstrap:
 
 		return puzzles_prob
 
-	def _curriculum_selection_only(self, nn_model, ordering, solutions, trajectories):
+	def train_model(self, data):
+		model = data[0]
+		memory = data[1]
+		batch_size = data[2]
+		loss = 1
+		while loss > 0.1:
+			loss = model.train_with_state_action(memory, batch_size)
+			print('Loss: ', loss)
+
+		model.save_weights(join(self._models_folder, 'model_weights'))
+		return loss
+
+	def _curriculum_selection_only(self, models, ordering, solutions, trajectories):
 		print("STARTING CURRICULUM SELECTION!")
 		marker = 0  # Used to tell the position of the last selected puzzle on the ordering
 		batch_problems = {}
@@ -614,7 +639,7 @@ class Bootstrap:
 		iteration = 1
 		memory = Memory()
 
-		previous_probabilities = self.verify_current_probabilities(solutions, nn_model)  # Verifying with new CNN (CNN2 with random initialization)
+		previous_probabilities = self.mult_verify_current_probabilities(solutions, models)  # Verifying with new CNN (CNN2 with random initialization)
 		curriculum_puzzles.append(ordering[marker][0])  # First puzzle in ordering is the first on the curriculum
 		with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
 							result_file.write("{:s}".format(ordering[0][0]))
@@ -628,7 +653,7 @@ class Bootstrap:
 
 		while len(trained_puzzles) < self._number_problems:
 			if not first_iteration:  # We must train at least once to start using these
-				current_probabilities = self.verify_current_probabilities(solutions, nn_model)
+				current_probabilities = self.mult_verify_current_probabilities(solutions, models)
 				chosen_puzzle, position = self.get_easiest_worsen_puzzle(ordering, previous_probabilities, current_probabilities)
 				print(current_probabilities)
 				if chosen_puzzle[0] is not None:
@@ -675,14 +700,14 @@ class Bootstrap:
 
 			memory.preprocess_data()
 			print('preprocessed pairs:', len(memory.get_preprocessed_pairs()))
-			loss = 1
-			while loss > 0.1:
-				loss = nn_model.train_with_state_action(memory, 1024)
-				print('Loss: ', loss)
+			with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
+				args = ((model, memory, 1024) for model in models)
+				results = executor.map(self.train_model, args)
+			for result in results:
+				last_loss = result
+				print('last_loss:', last_loss)
 
 			iteration += 1
-			nn_model.save_weights(join(self._models_folder, 'model_weights'))
-
 			new_batch_problems = {}
 			for p in batch_problems.keys():  # Create a new training batch without puzzles already solved
 				if p not in current_solved_puzzles:
@@ -1186,12 +1211,16 @@ class Bootstrap:
 
 		# Used for, after training and having the ordering, train a new ANN to select the curriculum puzzles
 		if nn_model.get_domain() == 'Witness':
+			num_models = self._ncpus
+			models = set()
 			KerasManager.register('KerasModel', KerasModel)
 			with KerasManager() as manager:
-				nn_model_selector = manager.KerasModel()
-				nn_model_selector.initialize('CrossEntropyLoss', 'Levin', domain='Witness', two_headed_model=False)
+				for i in range(num_models):
+					nn_model_selector = manager.KerasModel()
+					nn_model_selector.initialize('CrossEntropyLoss', 'Levin', domain='Witness', two_headed_model=False)
+					models.add(nn_model_selector)
 
-				self._curriculum_selection_only(nn_model_selector, ordering, solutions, trajectories)
+				self._curriculum_selection_only(models, ordering, solutions, trajectories)
 
 
 	def solve_problems(self, planner, nn_model, ordering=None, solutions=None):
