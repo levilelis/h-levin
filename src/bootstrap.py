@@ -9,6 +9,8 @@ import math
 from models.model_wrapper import KerasManager, KerasModel
 from search.bfs_levin import TreeNode
 import numpy as np
+import tracemalloc
+import gc
 
 class ProblemNode:
 	def __init__(self, k, n, name, instance):
@@ -650,6 +652,7 @@ class Bootstrap:
 		first_iteration = True
 		del self._states[puzzle_file]  # Clear dictionary of the states that were already solved
 		del previous_probabilities[puzzle_file]
+		gc.collect()
 
 		while len(trained_puzzles) < self._number_problems:
 			if not first_iteration:  # We must train at least once to start using these
@@ -679,6 +682,7 @@ class Bootstrap:
 						for p in batch_problems.keys():  # Clear dictionary of the states that were already solved
 							del self._states[p]
 							del previous_probabilities[p]
+							gc.collect()
 
 				else:  # Trains again with only the next puzzle in ordering
 					print("No puzzle was chosen in this iteration")
@@ -690,6 +694,7 @@ class Bootstrap:
 					print("Training with", puzzle_file)
 					del self._states[puzzle_file]  # Clear dictionary of the states that were already solved
 					del previous_probabilities[puzzle_file]
+					gc.collect()
 
 			first_iteration = False
 			current_solved_puzzles = set()
@@ -706,6 +711,9 @@ class Bootstrap:
 			for result in results:
 				last_loss = result
 				print('last_loss:', last_loss)
+			# For memory usage tests only, comment when sending to cluster!!!
+			"""current, peak = tracemalloc.get_traced_memory()
+			print('Current memory usage is', str(round((current/10**6), 2)) + 'MB', 'with peak of', str(round((peak/10**6), 2)) + 'MB')"""
 
 			iteration += 1
 			new_batch_problems = {}
@@ -714,6 +722,7 @@ class Bootstrap:
 					new_batch_problems[p] = batch_problems[p]
 
 			batch_problems = new_batch_problems
+		#tracemalloc.stop()  # For memory usage tests only, comment when sending to cluster!!!
 
 	def _solve_uniform_online_curriculum_selection(self, planner, nn_model, ordering, solutions):
 		marker = 0  # Used to tell the position of the last selected puzzle on the ordering
@@ -1114,6 +1123,7 @@ class Bootstrap:
 				iteration += 1
 
 	def _solve_aggregated_online(self, planner, nn_model):
+		#tracemalloc.start()  # For memory usage tests only, comment when sending to cluster!!!
 		iteration = 1
 		number_solved = 0
 		total_expanded = 0
@@ -1202,6 +1212,9 @@ class Bootstrap:
 			while loss > 0.1:
 				loss = nn_model.train_with_state_action(memory, 1024)
 				print('Loss: ', loss)
+			# For memory usage tests only, comment when sending to cluster!!!
+			"""current, peak = tracemalloc.get_traced_memory()
+			print('Current memory usage is', str(round((current/10**6), 2)) + 'MB', 'with peak of', str(round((peak/10**6), 2)) + 'MB')"""
 
 			iteration += 1
 			nn_model.save_weights(join(self._models_folder, 'model_weights'))
@@ -1220,8 +1233,16 @@ class Bootstrap:
 					nn_model_selector.initialize('CrossEntropyLoss', 'Levin', domain='Witness', two_headed_model=False)
 					models.add(nn_model_selector)
 
+				# Trying to free memory
+				del memory
+				del nn_model
+				del planner
+				gc.collect()
+				# For memory usage tests only, comment when sending to cluster!!!
+				"""current, peak = tracemalloc.get_traced_memory()
+				print('Current memory usage is', str(round((current/10**6), 2)) + 'MB', 'with peak of', str(round((peak/10**6), 2)) + 'MB')"""
+				
 				self._curriculum_selection_only(models, ordering, solutions, trajectories)
-
 
 	def solve_problems(self, planner, nn_model, ordering=None, solutions=None):
 		if self._scheduler == 'gbs':
