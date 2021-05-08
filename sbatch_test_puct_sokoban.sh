@@ -8,13 +8,13 @@ problems_dir="problems/sokoban/test/000.txt"
 
 #heuristic_scheme=("--learned-heuristic --default-heuristic" "--default-heuristic" "--learned-heuristic") 
 heuristic_scheme=("--learned-heuristic")
-constants=("1.5") 
-#constants=("1.0" "1.5" "2.0") 
+#constants=("1.5") 
+constants=("1.0" "1.5" "2.0") 
 algorithm="PUCT"
 
 scheduler="online"
 
-for iter in {1..1}; do
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for c in "${constants[@]}"; do
 			for loss in ${losses[@]}; do

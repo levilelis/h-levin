@@ -11,7 +11,7 @@ problems_dir="problems/sokoban/test/000.txt"
 
 scheduler="online"
 
-for iter in {1..1}; do
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for weight in 1.0 1.5 2.0 2.5; do
 			lower_algorithm=$(echo ${algorithm} | tr "A-Z" "a-z")

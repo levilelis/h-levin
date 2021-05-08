@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare -a losses=("ImprovedLevinLoss")
+declare -a losses=("LevinLoss")
 #declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
 output="output_test_stp_fixed_time/"
 domain_name="5x5-stp-"

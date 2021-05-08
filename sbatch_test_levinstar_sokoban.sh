@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss" "RegLevinLoss")
-declare -a losses=("ImprovedLevinLoss")
+declare -a losses=("LevinLoss")
 output="output_test_sokoban_fixed_time/"
 domain_name="10x10-sokoban-"
 problems_dir="problems/sokoban/test/000.txt"
@@ -13,7 +13,7 @@ algorithm="LevinStar"
 scheduler="online"
 mix_epsilon="0.01"
 
-for iter in {1..1}; do
+for iter in {1..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for loss in ${losses[@]}; do
 			lower_loss=$(echo ${loss} | tr "A-Z" "a-z")

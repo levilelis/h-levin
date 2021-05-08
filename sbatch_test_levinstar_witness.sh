@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #declare -a losses=("CrossEntropyLoss" "ImprovedLevinLoss" "LevinLoss")
-declare -a losses=("ImprovedLevinLoss")
+declare -a losses=("LevinLoss")
 output="output_test_witness_fixed_time/"
 domain_name="4x4-witness50k-"
 problems_dir="problems/witness/puzzles_4x4_50k_test"
