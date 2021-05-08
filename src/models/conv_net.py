@@ -161,20 +161,6 @@ class TwoHeadedConvNet(tf.keras.Model):
         losses = []
         memory.shuffle_trajectories()
         
-#         total_parameters = 0
-#         for variable in self.trainable_variables:
-#             # shape is an array of tf.Dimension
-#             shape = variable.get_shape()
-#             print('Shape: ', shape)
-# #             print(len(shape))
-#             variable_parameters = 1
-#             for dim in shape:
-#                 print('Dim: ', dim)
-#                 variable_parameters *= dim
-#             print(variable_parameters)
-#             total_parameters += variable_parameters
-#         print('Total parameters: ', total_parameters)
-        
         for trajectory in memory.next_trajectory():
             
             with tf.GradientTape() as tape:
@@ -270,20 +256,6 @@ class ConvNet(tf.keras.Model):
                 loss = self._loss_function.compute_loss(trajectory, self)
 
             grads = tape.gradient(loss, self.trainable_weights)
-            
-#             if self._loss_name == 'ImprovedLevinLoss':
-#                 if len(self._max_grad_norms) == 0:
-#                     for grad in grads:
-#                         self._max_grad_norms.append(tf.norm(grad, ord=1))
-#                 else:
-#                     for i in range(len(grads)):
-#                         norm = tf.norm(grads[i], ord=1)
-#                          
-#                         if norm > self._max_grad_norms[i]:
-#                             self._max_grad_norms[i] = norm
-#                          
-#                         if self._max_grad_norms[i] > 0:
-#                             grads[i] /= self._max_grad_norms[i]
             
             self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
             losses.append(loss)

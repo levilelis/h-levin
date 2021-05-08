@@ -106,7 +106,7 @@ class PUCTTreeNode:
             min_q = 0
 
         for a, q in self._puct_state.get_q_values().items():
-            normalized_Q[a] = (q + self._puct_state.get_virtual_loss(a) - min_q) / (max_q - min_q)
+            normalized_Q[a] = (q + self._puct_state.get_virtual_loss(a) - min_q) / (self._puct_state.get_virtual_loss(a) + max_q - min_q)
 
         uct_values = {}
         actions = self._puct_state.get_actions()
@@ -205,7 +205,8 @@ class PUCT():
     def __init__(self, use_heuristic=True, use_learned_heuristic=False, k_expansions=32, cpuct=1.0):
         self._use_heuristic = use_heuristic
         self._use_learned_heuristic = use_learned_heuristic
-        self._k = k_expansions
+#         self._k = k_expansions
+        self._k = 32
         self._cpuct = cpuct
         
         self._states_list = {} 

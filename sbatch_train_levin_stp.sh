@@ -24,7 +24,7 @@ for iter in {1..5}; do
 			#echo ${output_exp}
 			#echo ${model}
 
-			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model},scheduler=${scheduler} run_bootstrap_train_stp.sh
+			sbatch --output=${output_exp} --export=scheme="${scheme}",algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train_stp.sh
 		done
 	done
 done
