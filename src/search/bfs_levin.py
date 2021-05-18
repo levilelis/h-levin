@@ -348,7 +348,7 @@ class BFSLevin():
 		state = data[0]
 		puzzle_name = data[1]
 		budget = data[2]
-		nn_model = data[3]
+		models = data[3]
 
 		_open = []
 		_closed = set()
@@ -359,11 +359,27 @@ class BFSLevin():
 		#         print('Attempting puzzle ', puzzle_name, ' with budget: ', budget)
 		#         return False, None, expanded, generated, puzzle_name
 
+		action_distribution_total = None  # Used to get the mean of all predicted values from different models
 		if self._use_learned_heuristic:
-			_, action_distribution, _ = nn_model.predict(np.array([state.get_image_representation()]))
+			first = True
+			for model in models:
+				_, action_distribution, _ = model.predict(np.array([state.get_image_representation()]))
+				if first:
+					action_distribution_total = action_distribution
+					first = False
+				else:
+					action_distribution_total += action_distribution
 		else:
-			_, action_distribution = nn_model.predict(np.array([state.get_image_representation()]))
+			first = True
+			for model in models:
+				_, action_distribution = model.predict(np.array([state.get_image_representation()]))
+				if first:
+					action_distribution_total = action_distribution
+					first = False
+				else:
+					action_distribution_total += action_distribution
 
+		action_distribution = action_distribution_total/len(models)
 		action_distribution_log = np.log(
 			(1 - self._mix_epsilon) * action_distribution + (self._mix_epsilon * (1 / action_distribution.shape[1])))
 
@@ -425,12 +441,27 @@ class BFSLevin():
 
 			if len(children_to_be_evaluated) >= self._k or len(_open) == 0:
 
+				action_distribution_total = None  # Used to get the mean of all predicted values from different models
 				if self._use_learned_heuristic:
-					_, action_distribution, predicted_h = nn_model.predict(
-						np.array(x_input_of_children_to_be_evaluated))
+					first = True
+					for model in models:
+						_, action_distribution, predicted_h = model.predict(np.array(x_input_of_children_to_be_evaluated))
+						if first:
+							action_distribution_total = action_distribution
+							first = False
+						else:
+							action_distribution_total += action_distribution
 				else:
-					_, action_distribution = nn_model.predict(np.array(x_input_of_children_to_be_evaluated))
+					first = True
+					for model in models:
+						_, action_distribution = model.predict(np.array(x_input_of_children_to_be_evaluated))
+						if first:
+							action_distribution_total = action_distribution
+							first = False
+						else:
+							action_distribution_total += action_distribution
 
+				action_distribution = action_distribution_total/len(models)
 				action_distribution_log = np.log((1 - self._mix_epsilon) * action_distribution + (
 						self._mix_epsilon * (1 / action_distribution.shape[1])))
 

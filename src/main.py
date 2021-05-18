@@ -211,11 +211,15 @@ def main():
 
 	parser.add_argument('--learn', action='store_true', default=False,
 						dest='learning_mode',
-						help='Train as neural model out of the instances from the problem folder')
+						help='Train a neural model out of the instances from the problem folder')
 
 	parser.add_argument('--learn-curriculum', action='store_true', default=False,
 						dest='learning_mode',
-						help='Train as neural model out of the instances from the problem folder and generate a curriculum')
+						help='Train a neural model out of the instances from the problem folder and generate a curriculum')
+
+	parser.add_argument('--multi-model', action='store_true', default=False,
+						dest='multi_model',
+						help='Uses multiple models (the number of available cpus) to train and generate a curriculum')
 
 	parser.add_argument('-test', action='store_true', default=False,
 						dest='test_mode',
@@ -334,17 +338,16 @@ def main():
 	print('Loaded ', len(states), ' instances')
 #     input_size = s.get_image_representation().shape
 
-	if not parameters.test_mode:
+	if not parameters.test_mode and not parameters.multi_model:
 #       set_start_method('forkserver', force=True)
 
 		KerasManager.register('KerasModel', KerasModel)
 		ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 3))
 		print('ncpus:', ncpus)
 
-		k_expansions = 32
+		k_expansions = 1  # To ensure BFS ordering
 
 	#     print('Number of cpus available: ', ncpus)
-
 		with KerasManager() as manager:
 
 			nn_model = manager.KerasModel()
@@ -442,6 +445,37 @@ def main():
 					search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
 				else:
 					search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
+
+	elif parameters.multi_model:
+		ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 3))
+		print('ncpus:', ncpus)
+		num_models = ncpus
+		models = set()
+		k_expansions = 1  # To ensure BFS ordering
+
+		KerasManager.register('KerasModel', KerasModel)
+		with KerasManager() as manager:
+			for i in range(num_models):
+				nn_model_solver = manager.KerasModel()
+				nn_model_solver.initialize('CrossEntropyLoss', 'Levin', domain='Witness', two_headed_model=False)
+				models.add(nn_model_solver)
+
+			bootstrap = None
+
+			if parameters.learning_mode:
+				bootstrap = Bootstrap(states, parameters.model_name,
+									  parameters.scheduler,
+									  ncpus=ncpus,
+									  initial_budget=int(parameters.search_budget),
+									  gradient_steps=int(parameters.gradient_steps))
+
+			if parameters.search_algorithm == 'Levin':
+				bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, False, k_expansions, float(parameters.mix_epsilon))
+			else:
+				bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, True, k_expansions, float(parameters.mix_epsilon))
+
+			bootstrap.solve_problems(bfs_planner, models, ordering, solutions)
+
 	else:
 		states['puzzle_1'].print()
 		print()

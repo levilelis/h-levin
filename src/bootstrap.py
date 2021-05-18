@@ -512,8 +512,8 @@ class Bootstrap:
 																				 end-start)))
 				results_file.write('\n')
 
-	def get_easiest_worsen_puzzle(self, ordering, previous_probs, current_probs):
-		"""Verifies the puzzle with the highest solution probability that got harder during training, and return it with its probability and position in ordering"""
+	def get_easiest_worsen_puzzle(self, solved_blocks, previous_probs, current_probs):
+		"""Verifies the puzzle with the highest solution probability that got harder during training, and return it with its probability and position in solved_blocks"""
 		easiest_worsen_puzzle = None
 		best_prob = 0
 		position = 0
@@ -524,9 +524,13 @@ class Bootstrap:
 				easiest_worsen_puzzle = puzzle
 				best_prob = current_probs[puzzle]
 
-		for i in range(len(ordering)):
+		"""for i in range(len(ordering)):
 			if ordering[i][0] == easiest_worsen_puzzle:
 				position = i
+				break"""
+		for number, block in solved_blocks.items():
+			if easiest_worsen_puzzle in block.keys():
+				position = number
 				break
 
 		return [easiest_worsen_puzzle, best_prob], position
@@ -631,9 +635,9 @@ class Bootstrap:
 		model.save_weights(join(self._models_folder, 'model_weights'))
 		return loss
 
-	def _curriculum_selection_only(self, models, ordering, solutions, trajectories):
+	def _curriculum_selection_only(self, models, ordering, solutions, solved_blocks):
 		print("STARTING CURRICULUM SELECTION!")
-		marker = 0  # Used to tell the position of the last selected puzzle on the ordering
+		marker = 1  # Used to tell the solved block of the last selected puzzle on solved_blocks
 		batch_problems = {}
 		curriculum_puzzles = []
 		trained_puzzles = set()
@@ -642,22 +646,25 @@ class Bootstrap:
 		memory = Memory()
 
 		previous_probabilities = self.mult_verify_current_probabilities(solutions, models)  # Verifying with new CNN (CNN2 with random initialization)
-		curriculum_puzzles.append(ordering[marker][0])  # First puzzle in ordering is the first on the curriculum
+		curriculum_puzzles.append(ordering[0][0])  # First puzzle in ordering is the first on the curriculum (if we work with blocks, how can we choose the very first puzzle?)
 		with open(join(self._log_folder + self._model_name + '_curriculum_puzzles'), 'a') as result_file:
 							result_file.write("{:s}".format(ordering[0][0]))
 							result_file.write('\n')
 
-		puzzle_file = ordering[marker][0]  # First train only with first puzzle
-		batch_problems[puzzle_file] = self._states[puzzle_file]
+		trajectories = {}  # Trajectories from puzzles of this iteration
+		# Train with all puzzles in the first solved block
+		for p in solved_blocks[marker].keys():
+			batch_problems[p] = self._states[p]
+			trajectories[p] = solved_blocks[marker][p]
+			del self._states[p]  # Clear dictionary of the states that were already solved
+			del previous_probabilities[p]
 		first_iteration = True
-		del self._states[puzzle_file]  # Clear dictionary of the states that were already solved
-		del previous_probabilities[puzzle_file]
 		gc.collect()
 
 		while len(trained_puzzles) < self._number_problems:
 			if not first_iteration:  # We must train at least once to start using these
 				current_probabilities = self.mult_verify_current_probabilities(solutions, models)
-				chosen_puzzle, position = self.get_easiest_worsen_puzzle(ordering, previous_probabilities, current_probabilities)
+				chosen_puzzle, position = self.get_easiest_worsen_puzzle(solved_blocks, previous_probabilities, current_probabilities)
 				print(current_probabilities)
 				if chosen_puzzle[0] is not None:
 						print("Chosen Puzzle is", chosen_puzzle[0])
@@ -669,12 +676,19 @@ class Bootstrap:
 									result_file.write("{:s}".format(chosen_puzzle[0]))
 									result_file.write('\n')
 
-						puzzles = ordering[marker+1:position+1]
-						batch_problems = {}
+						"""puzzles = ordering[marker+1:position+1]
 						for p, _ in puzzles:
-							batch_problems[p] = self._states[p]
+							batch_problems[p] = self._states[p]"""
 
-						print("Training with", batch_problems.keys())
+						batch_problems = {}
+						trajectories = {}  # Trajectories from puzzles of this iteration
+						for i in range(marker+1, position+1):
+							for p in solved_blocks[i].keys():
+								batch_problems[p] = self._states[p]
+								trajectories[p] = solved_blocks[i][p]
+
+
+						print("Training with", batch_problems.keys(), 'from blocks', str(marker+1), 'to', position)
 
 						marker = position
 						previous_probabilities = copy.deepcopy(current_probabilities)
@@ -682,19 +696,24 @@ class Bootstrap:
 						for p in batch_problems.keys():  # Clear dictionary of the states that were already solved
 							del self._states[p]
 							del previous_probabilities[p]
-							gc.collect()
+						gc.collect()
 
 				else:  # Trains again with only the next puzzle in ordering
 					print("No puzzle was chosen in this iteration")
 					marker += 1
-					if marker >= len(ordering):
+					if marker > len(solved_blocks.keys()):
 						break
-					puzzle_file = ordering[marker][0]
-					batch_problems = {puzzle_file: self._states[puzzle_file]}
-					print("Training with", puzzle_file)
-					del self._states[puzzle_file]  # Clear dictionary of the states that were already solved
-					del previous_probabilities[puzzle_file]
+					batch_problems = {}
+					trajectories = {}  # Trajectories from puzzles of this iteration
+					# Train with all puzzles in the next solved block
+					for p in solved_blocks[marker].keys():
+						batch_problems[p] = self._states[p]
+						trajectories[p] = solved_blocks[marker][p]
+						del self._states[p]  # Clear dictionary of the states that were already solved
+						del previous_probabilities[p]
 					gc.collect()
+
+					print("Training with", batch_problems.keys(), 'from block', marker)
 
 			first_iteration = False
 			current_solved_puzzles = set()
@@ -1122,7 +1141,7 @@ class Bootstrap:
 
 				iteration += 1
 
-	def _solve_aggregated_online(self, planner, nn_model):
+	def _solve_aggregated_online(self, planner, models):
 		#tracemalloc.start()  # For memory usage tests only, comment when sending to cluster!!!
 		iteration = 1
 		number_solved = 0
@@ -1130,6 +1149,7 @@ class Bootstrap:
 		total_generated = 0
 
 		# The next three are used on curriculum selection after this training
+		solved_blocks = {}
 		trajectories = {}
 		solutions = {}
 		ordering = []
@@ -1154,7 +1174,7 @@ class Bootstrap:
 
 			with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
 				# args = ((state, name, budget, nn_model) for name, state in batch_problems.items())
-				args = ((state, name, state_budget[name], nn_model) for name, state in batch_problems.items())
+				args = ((state, name, state_budget[name], models) for name, state in batch_problems.items())
 				results = executor.map(planner.search_for_learning, args)  # results = executor.map(planner.search_for_learning, args)
 			for result in results:
 				has_found_solution = result[0]
@@ -1208,41 +1228,48 @@ class Bootstrap:
 
 			memory.preprocess_data()
 			print('preprocessed pairs:', len(memory.get_preprocessed_pairs()))
-			loss = 1
+			with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
+				args = ((model, memory, 1024) for model in models)
+				results = executor.map(self.train_model, args)
+			for result in results:
+				last_loss = result
+				print('last_loss:', last_loss)
+			"""loss = 1
 			while loss > 0.1:
 				loss = nn_model.train_with_state_action(memory, 1024)
-				print('Loss: ', loss)
+				print('Loss: ', loss)"""
 			# For memory usage tests only, comment when sending to cluster!!!
 			"""current, peak = tracemalloc.get_traced_memory()
 			print('Current memory usage is', str(round((current/10**6), 2)) + 'MB', 'with peak of', str(round((peak/10**6), 2)) + 'MB')"""
-
+			solved_blocks[iteration] = trajectories  # Add the block of puzzles solved this iteration
 			iteration += 1
-			nn_model.save_weights(join(self._models_folder, 'model_weights'))
+			trajectories = {}  # Get a new block of trajectories for the solved_blocks
+			# nn_model.save_weights(join(self._models_folder, 'model_weights'))  # Not saving for now, since we are using multiple models
 			batch_problems.clear()
 
 			print('Number solved: ', number_solved)
 
 		# Used for, after training and having the ordering, train a new ANN to select the curriculum puzzles
-		if nn_model.get_domain() == 'Witness':
+		if list(models)[0].get_domain() == 'Witness':
 			num_models = self._ncpus
-			models = set()
+			selector_models = set()
 			KerasManager.register('KerasModel', KerasModel)
 			with KerasManager() as manager:
 				for i in range(num_models):
 					nn_model_selector = manager.KerasModel()
 					nn_model_selector.initialize('CrossEntropyLoss', 'Levin', domain='Witness', two_headed_model=False)
-					models.add(nn_model_selector)
+					selector_models.add(nn_model_selector)
 
 				# Trying to free memory
 				del memory
-				del nn_model
+				del models
 				del planner
 				gc.collect()
 				# For memory usage tests only, comment when sending to cluster!!!
 				"""current, peak = tracemalloc.get_traced_memory()
 				print('Current memory usage is', str(round((current/10**6), 2)) + 'MB', 'with peak of', str(round((peak/10**6), 2)) + 'MB')"""
-				
-				self._curriculum_selection_only(models, ordering, solutions, trajectories)
+
+				self._curriculum_selection_only(selector_models, ordering, solutions, solved_blocks)
 
 	def solve_problems(self, planner, nn_model, ordering=None, solutions=None):
 		if self._scheduler == 'gbs':
