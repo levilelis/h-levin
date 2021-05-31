@@ -1141,7 +1141,7 @@ class Bootstrap:
 
 				iteration += 1
 
-	def _solve_aggregated_online(self, planner, models):
+	def _solve_aggregated_online(self, planner, models, cur_gen):
 		#tracemalloc.start()  # For memory usage tests only, comment when sending to cluster!!!
 		iteration = 1
 		number_solved = 0
@@ -1163,6 +1163,10 @@ class Bootstrap:
 
 		for name, state in self._states.items():
 			state_budget[name] = self._initial_budget
+
+		with open(join(self._log_folder + 'training_bootstrap_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
+			result_file.write("{:d}".format(iteration))
+			result_file.write('\n')
 
 		while len(current_solved_puzzles) < self._number_problems:
 			number_solved = 0
@@ -1247,10 +1251,14 @@ class Bootstrap:
 			# nn_model.save_weights(join(self._models_folder, 'model_weights'))  # Not saving for now, since we are using multiple models
 			batch_problems.clear()
 
+			with open(join(self._log_folder + 'training_bootstrap_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
+				result_file.write("{:d}".format(iteration))
+				result_file.write('\n')
+
 			print('Number solved: ', number_solved)
 
-		# Used for, after training and having the ordering, train a new ANN to select the curriculum puzzles
-		if list(models)[0].get_domain() == 'Witness':
+		# Used for, after training and having the ordering, train a new ANN to select the curriculum puzzles if cur_gen=True
+		if list(models)[0].get_domain() == 'Witness' and cur_gen:
 			num_models = self._ncpus
 			selector_models = set()
 			KerasManager.register('KerasModel', KerasModel)
@@ -1271,7 +1279,7 @@ class Bootstrap:
 
 				self._curriculum_selection_only(selector_models, ordering, solutions, solved_blocks)
 
-	def solve_problems(self, planner, nn_model, ordering=None, solutions=None):
+	def solve_problems(self, planner, nn_model, ordering=None, solutions=None, cur_gen=False):
 		if self._scheduler == 'gbs':
 			self._solve_gbs(planner, nn_model)
 		elif self._scheduler == 'online':
@@ -1281,6 +1289,6 @@ class Bootstrap:
 		elif self._scheduler == 'curriculum':
 			self._solve_uniform_online_curriculum_selection(planner, nn_model, ordering, solutions)
 		elif self._scheduler == 'aggregated':
-			self._solve_aggregated_online(planner, nn_model)
+			self._solve_aggregated_online(planner, nn_model, cur_gen)
 		else:
 			self._solve_uniform(planner, nn_model)

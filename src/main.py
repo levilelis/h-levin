@@ -452,6 +452,7 @@ def main():
 		num_models = ncpus
 		models = set()
 		k_expansions = 1  # To ensure BFS ordering
+		cur_gen = False  # Changed to True when after learning needs to select a curriculum
 
 		KerasManager.register('KerasModel', KerasModel)
 		with KerasManager() as manager:
@@ -469,12 +470,15 @@ def main():
 									  initial_budget=int(parameters.search_budget),
 									  gradient_steps=int(parameters.gradient_steps))
 
+			if parameters.learning_mode == "--learn-curriculum":
+				cur_gen = True
+
 			if parameters.search_algorithm == 'Levin':
 				bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, False, k_expansions, float(parameters.mix_epsilon))
 			else:
 				bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, True, k_expansions, float(parameters.mix_epsilon))
 
-			bootstrap.solve_problems(bfs_planner, models, ordering, solutions)
+			bootstrap.solve_problems(bfs_planner, models, ordering, solutions, cur_gen)
 
 	else:
 		states['puzzle_1'].print()
