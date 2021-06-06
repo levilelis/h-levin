@@ -396,7 +396,7 @@ class BFSLevin():
 		children_to_be_evaluated = []
 		x_input_of_children_to_be_evaluated = []
 		
-		smallest_largest_value = math.inf
+		smallest_budget_value = math.inf
 		first_encountered = None
 
 		while len(_open) > 0:
@@ -417,8 +417,8 @@ class BFSLevin():
 				if first_encountered is None:
 					first_encountered = current_levin_cost
 				
-				if current_levin_cost < smallest_largest_value:
-					smallest_largest_value = current_levin_cost
+				if current_levin_cost < smallest_budget_value:
+					smallest_budget_value = current_levin_cost
 				continue
 # 				return False, None, expanded, generated, puzzle_name, math.ceil(current_levin_cost)  # Returning ceil of levin_cost as new budget
 
@@ -486,5 +486,5 @@ class BFSLevin():
 				x_input_of_children_to_be_evaluated.clear()
 		# print('Emptied Open List in puzzle: ', puzzle_name, ' next budget: ', math.ceil(smallest_largest_value))
 		
-		return False, None, expanded, generated, puzzle_name, math.ceil(smallest_largest_value)  # Returning ceil of levin_cost as new budget
+		return False, None, expanded, generated, puzzle_name, math.ceil(smallest_budget_value)  # Returning ceil of levin_cost as new budget
 	

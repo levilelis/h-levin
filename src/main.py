@@ -14,6 +14,7 @@ from domains.sliding_tile_puzzle import SlidingTilePuzzle
 from domains.sokoban import Sokoban
 from search.puct import PUCT
 from bootstrap import Bootstrap
+from log_reader import TrajectoryGenerator
 from multiprocessing import set_start_method
 
    
@@ -213,8 +214,8 @@ def main():
 						dest='learning_mode',
 						help='Train a neural model out of the instances from the problem folder')
 
-	parser.add_argument('--learn-curriculum', action='store_true', default=False,
-						dest='learning_mode',
+	parser.add_argument('--curriculum-gen', action='store_true', default=False,
+						dest='curriculum_gen',
 						help='Train a neural model out of the instances from the problem folder and generate a curriculum')
 
 	parser.add_argument('--multi-model', action='store_true', default=False,
@@ -232,7 +233,7 @@ def main():
 	all_paths = None
 	solutions = None
 
-	if parameters.ordering_file:  # Used for --learn-curriculum, result of the first Neural Network training
+	"""if parameters.ordering_file:  # Used for --learn-curriculum, result of the first Neural Network training
 		with open(parameters.ordering_file, 'r') as file:
 			ordering = []
 			solutions = {}
@@ -272,7 +273,7 @@ def main():
 							else:
 								all_paths_for_puzzle.append(path)
 								path = []
-						all_paths[puzzle] = all_paths_for_puzzle
+						all_paths[puzzle] = all_paths_for_puzzle"""
 
 	if parameters.problem_domain == 'SlidingTile' and parameters.single_test_file:
 		with open(parameters.problems_folder, 'r') as file:
@@ -409,7 +410,7 @@ def main():
 				else:
 					nn_model.initialize(parameters.loss_function, parameters.search_algorithm, two_headed_model=False)
 
-				if parameters.learning_mode == '--learn' or '--learn-curriculum':
+				if parameters.learning_mode: # == '--learn' or '--learn-curriculum':
 	#                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
 					bootstrap.solve_problems(bfs_planner, nn_model, ordering)
 				elif parameters.blind_search:
@@ -452,7 +453,6 @@ def main():
 		num_models = ncpus
 		models = set()
 		k_expansions = 1  # To ensure BFS ordering
-		cur_gen = False  # Changed to True when after learning needs to select a curriculum
 
 		KerasManager.register('KerasModel', KerasModel)
 		with KerasManager() as manager:
@@ -470,18 +470,15 @@ def main():
 									  initial_budget=int(parameters.search_budget),
 									  gradient_steps=int(parameters.gradient_steps))
 
-			if parameters.learning_mode == "--learn-curriculum":
-				cur_gen = True
-
 			if parameters.search_algorithm == 'Levin':
 				bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, False, k_expansions, float(parameters.mix_epsilon))
 			else:
 				bfs_planner = BFSLevin(parameters.use_heuristic, parameters.use_learned_heuristic, True, k_expansions, float(parameters.mix_epsilon))
 
-			bootstrap.solve_problems(bfs_planner, models, ordering, solutions, cur_gen)
+			bootstrap.solve_problems(bfs_planner, models, ordering, solutions, parameters.curriculum_gen)
 
 	else:
-		states['puzzle_1'].print()
+		"""states['puzzle_1'].print()
 		print()
 		states['puzzle_1'].flip_up_down()
 		print()
@@ -495,7 +492,33 @@ def main():
 		print()
 		states['puzzle_1'].rotate90()
 		print()
-		states['puzzle_1'].flip_up_down()
+		states['puzzle_1'].flip_up_down()"""
+
+		t_gen = TrajectoryGenerator("orderings/multi-model-31-05-and-01-06/testerino_average_ordering", states)
+		solved_blocks, solutions = t_gen.get_solved_blocks_and_solutions()
+
+		KerasManager.register('KerasModel', KerasModel)
+		ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 3))
+		print('ncpus:', ncpus)
+
+		k_expansions = 1  # To ensure BFS ordering
+
+		with KerasManager() as manager:
+
+			nn_model = manager.KerasModel()
+
+			bootstrap = Bootstrap(states, parameters.model_name,
+								  parameters.scheduler,
+								  ncpus=ncpus,
+								  initial_budget=int(parameters.search_budget),
+								  gradient_steps=int(parameters.gradient_steps))
+
+			ordering = [['witness_1', 0]]
+			models = set()
+			nn_model.initialize('CrossEntropyLoss', 'Levin', domain='Witness', two_headed_model=False)
+			models.add(nn_model)
+			bootstrap._curriculum_selection_only(models, ordering, solutions, solved_blocks)
+
 
 if __name__ == "__main__":
 	main()

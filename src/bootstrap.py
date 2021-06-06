@@ -512,6 +512,30 @@ class Bootstrap:
 																				 end-start)))
 				results_file.write('\n')
 
+	def select_curriculum_puzzle(self, solved_blocks, previous_probs, current_probs):
+		"""Checks for the puzzle in the earlier block that had its probability increase and return it with its probability and position in solved_blocks"""
+		easiest_worsen_puzzle = None
+		best_prob = 0
+		position = 999999
+		current_pos = 0
+		for puzzle, prob in previous_probs.items():
+			if previous_probs[puzzle] > current_probs[puzzle]:  # First, check if a puzzle got harder than last iteration
+				for number, block in solved_blocks.items():
+					if puzzle in block.keys():  # If so, check the block in which it was solved during ordering
+						current_pos = number
+						break
+				if current_pos < position:  # If its' position is earlier than the last best puzzle selected, hold him as the new selected
+					position = current_pos
+					easiest_worsen_puzzle = puzzle
+					best_prob = current_probs[puzzle]
+
+				elif current_pos == position:  # If the last puzzle selected and this one are from the same block, check the one with the highest solving probability
+					if current_probs[puzzle] > best_prob:
+						easiest_worsen_puzzle = puzzle
+						best_prob = current_probs[puzzle]
+
+		return [easiest_worsen_puzzle, best_prob], position
+
 	def get_easiest_worsen_puzzle(self, solved_blocks, previous_probs, current_probs):
 		"""Verifies the puzzle with the highest solution probability that got harder during training, and return it with its probability and position in solved_blocks"""
 		easiest_worsen_puzzle = None
@@ -664,7 +688,8 @@ class Bootstrap:
 		while len(trained_puzzles) < self._number_problems:
 			if not first_iteration:  # We must train at least once to start using these
 				current_probabilities = self.mult_verify_current_probabilities(solutions, models)
-				chosen_puzzle, position = self.get_easiest_worsen_puzzle(solved_blocks, previous_probabilities, current_probabilities)
+				# chosen_puzzle, position = self.get_easiest_worsen_puzzle(solved_blocks, previous_probabilities, current_probabilities)  # Getting the higher probability in general
+				chosen_puzzle, position = self.select_curriculum_puzzle(solved_blocks, previous_probabilities, current_probabilities)  # Getting the earlier in the blocks
 				print(current_probabilities)
 				if chosen_puzzle[0] is not None:
 						print("Chosen Puzzle is", chosen_puzzle[0])
@@ -1257,6 +1282,7 @@ class Bootstrap:
 
 			print('Number solved: ', number_solved)
 
+		print(cur_gen, list(models)[0].get_domain())
 		# Used for, after training and having the ordering, train a new ANN to select the curriculum puzzles if cur_gen=True
 		if list(models)[0].get_domain() == 'Witness' and cur_gen:
 			num_models = self._ncpus
