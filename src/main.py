@@ -494,7 +494,7 @@ def main():
 		print()
 		states['puzzle_1'].flip_up_down()"""
 
-		t_gen = TrajectoryGenerator("orderings/multi-model-31-05-and-01-06/testerino_average_ordering", states)
+		t_gen = TrajectoryGenerator("multi-model-01-06-21_average_ordering", states)
 		solved_blocks, solutions = t_gen.get_solved_blocks_and_solutions()
 
 		KerasManager.register('KerasModel', KerasModel)
