@@ -688,8 +688,8 @@ class Bootstrap:
 		while len(trained_puzzles) < self._number_problems:
 			if not first_iteration:  # We must train at least once to start using these
 				current_probabilities = self.mult_verify_current_probabilities(solutions, models)
-				# chosen_puzzle, position = self.get_easiest_worsen_puzzle(solved_blocks, previous_probabilities, current_probabilities)  # Getting the higher probability in general
-				chosen_puzzle, position = self.select_curriculum_puzzle(solved_blocks, previous_probabilities, current_probabilities)  # Getting the earlier in the blocks
+				chosen_puzzle, position = self.get_easiest_worsen_puzzle(solved_blocks, previous_probabilities, current_probabilities)  # Getting the higher probability in general
+				# chosen_puzzle, position = self.select_curriculum_puzzle(solved_blocks, previous_probabilities, current_probabilities)  # Getting the earlier in the blocks
 				print(current_probabilities)
 				if chosen_puzzle[0] is not None:
 						print("Chosen Puzzle is", chosen_puzzle[0])
