@@ -708,9 +708,10 @@ class Bootstrap:
 						batch_problems = {}
 						trajectories = {}  # Trajectories from puzzles of this iteration
 						for i in range(marker+1, position+1):
-							for p in solved_blocks[i].keys():
-								batch_problems[p] = self._states[p]
-								trajectories[p] = solved_blocks[i][p]
+							if i in solved_blocks.keys():
+								for p in solved_blocks[i].keys():
+									batch_problems[p] = self._states[p]
+									trajectories[p] = solved_blocks[i][p]
 
 
 						print("Training with", batch_problems.keys(), 'from blocks', str(marker+1), 'to', position)
