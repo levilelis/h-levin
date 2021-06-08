@@ -394,7 +394,9 @@ def main():
 				if parameters.learning_mode:
 	#                 bootstrap_learning_bfs(states, bfs_planner, nn_model, parameters.model_name, int(parameters.search_budget), ncpus)
 					# bootstrap.solve_problems(bfs_planner, nn_model, ordering, all_paths)
-					bootstrap.solve_problems(bfs_planner, nn_model, ordering, solutions)
+					models = set()
+					models.add(nn_model)
+					bootstrap.solve_problems(bfs_planner, models, ordering, solutions, parameters.curriculum_gen)
 				elif parameters.blind_search:
 					search(states, bfs_planner, nn_model, ncpus, int(parameters.time_limit), int(parameters.search_budget))
 				else:

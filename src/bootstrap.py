@@ -1286,7 +1286,7 @@ class Bootstrap:
 		print(cur_gen, list(models)[0].get_domain())
 		# Used for, after training and having the ordering, train a new ANN to select the curriculum puzzles if cur_gen=True
 		if list(models)[0].get_domain() == 'Witness' and cur_gen:
-			num_models = self._ncpus
+			num_models = 1 # self._ncpus  # Using only 1 model for now
 			selector_models = set()
 			KerasManager.register('KerasModel', KerasModel)
 			with KerasManager() as manager:
