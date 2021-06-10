@@ -119,6 +119,70 @@ class LogReader:
                             result_file.write(("{:d} ".format(action)))
                         result_file.write('\n')
 
+    def get_simple_ordering_from_file(self, ordering_file):
+        with open(join(self.log_folder, ordering_file), "r") as stream:
+            ordering = []
+            for line in stream:
+                data = line.split('\n')
+                if not len(line.split(', ')) == 1:
+                    puzzle = data[0].split(', ')[0]
+                    ordering.append(puzzle)
+
+        return ordering
+
+    def generate_spread_curriculum(self, ordering_file, result_file, num_puzzles=9):
+        if num_puzzles < 3:
+            print("Number of puzzles for spread curriculum is too low.", num_puzzles)
+        ordering = self.get_simple_ordering_from_file(ordering_file)
+        size = len(ordering)
+        middle = math.floor(size/2)
+        self.spread_curriculum = [ordering[0], ordering[middle], ordering[size-1]]  # Spread starts with the first and last puzzles on ordering
+        self.left_medians = []
+        self.right_medians = []
+
+        self.rec_ordering_median_left(ordering[:middle], self.left_medians)
+        self.rec_ordering_median_right(ordering[middle:], self.right_medians)
+        left_i = 0
+        right_i = 0
+
+        while len(self.spread_curriculum) < num_puzzles:
+            if len(self.spread_curriculum) % 2 == 1:
+                if self.left_medians[left_i] not in self.spread_curriculum:
+                    self.spread_curriculum.append(self.left_medians[left_i])
+                left_i += 1
+            else:
+                if self.right_medians[right_i] not in self.spread_curriculum:
+                    self.spread_curriculum.append(self.right_medians[right_i])
+                right_i += 1
+
+        for i in range(len(ordering)):
+            if ordering[i] in self.spread_curriculum:
+                with open(result_file, 'a') as file:
+                    file.write("{:s}".format(ordering[i]))
+                    file.write("\n")
+
+    def rec_ordering_median_left(self, ordering, medians_list):
+        if len(ordering) == 1:
+            medians_list.append(ordering[0])
+            return medians_list
+
+        middle = math.floor(len(ordering)/2)
+        if ordering[middle] not in medians_list:
+            medians_list.append(ordering[middle])
+        self.rec_ordering_median_left(ordering[:middle], medians_list)
+        self.rec_ordering_median_left(ordering[middle:], medians_list)
+
+    def rec_ordering_median_right(self, ordering, medians_list):
+        if len(ordering) == 1:
+            medians_list.append(ordering[0])
+            return medians_list
+
+        middle = math.floor(len(ordering)/2)
+        if ordering[middle] not in medians_list:
+            medians_list.append(ordering[middle])
+        self.rec_ordering_median_right(ordering[middle:], medians_list)
+        self.rec_ordering_median_right(ordering[:middle], medians_list)
+
 
 class TrajectoryGenerator:
     def __init__(self, ordering_file, states):
@@ -176,20 +240,36 @@ class TrajectoryGenerator:
 
 def main():
     parser = argparse.ArgumentParser()
-
     parser.add_argument('-f', action='store', dest='log_folder',
-                        help='Folder in which the logs are found')
+                        help='Folder in which the logs are found (used for average ordering)')
 
     parser.add_argument('-o', action='store', dest='ordering_file',
-                        help='Name of the resulting average ordering file')
+                        help='Name of the resulting average ordering file (used for average ordering)')
 
+    parser.add_argument('-po', action='store', dest='puzzles_ordering',
+                        help='Name of the puzzles ordering file (used for spread generation)')
+
+    parser.add_argument('-s', action='store', dest='spread_file',
+                        help='Name of the resulting spread curriculum (used for spread generation)')
+
+    parser.add_argument('-size', action='store', dest='size',
+                        help='Desired size of spread curriculum (used for spread generation)')
+
+    parser.add_argument('--spread', action='store_true', dest='spread_gen',
+                        help='Sets the generate spread curriculum mode')
+    
     parameters = parser.parse_args()
 
-    log_reader = LogReader(parameters.log_folder)
-    seed_iterations_names = log_reader.read_logs_iterations_names()
-    puzzles_solutions = log_reader.read_logs_get_best_solution_path()
-    avg_ordering = log_reader.compute_average_ordering(seed_iterations_names)
-    log_reader.generate_average_ordering_log(avg_ordering, puzzles_solutions, parameters.ordering_file)
+    if parameters.spread_gen:  # Spread generation
+        log_reader = LogReader("")
+        log_reader.generate_spread_curriculum(parameters.puzzles_ordering, parameters.spread_file, parameters.size)
+
+    else:  # Average ordering generation
+        log_reader = LogReader(parameters.log_folder)
+        seed_iterations_names = log_reader.read_logs_iterations_names()
+        puzzles_solutions = log_reader.read_logs_get_best_solution_path()
+        avg_ordering = log_reader.compute_average_ordering(seed_iterations_names)
+        log_reader.generate_average_ordering_log(avg_ordering, puzzles_solutions, parameters.ordering_file)
 
 
 if __name__ == "__main__":
