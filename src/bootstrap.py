@@ -577,11 +577,12 @@ class Bootstrap:
 
 		return puzzles_prob
 
-	def verify_path_probability(self, state, path, nn_model):
+	def verify_path_probability(self, state, path, nn_model, step_by_step=False):
 		"""
 		This function receives a puzzle state and one of its solution paths and checks the probability (prob)
 		of the current policy solving that instance.
 		Calculated by the productory of probabilities of actions in path.
+		If steb_by_step = True, return probability of each step on an array
 		"""
 		state.clear_path()
 
@@ -590,6 +591,9 @@ class Bootstrap:
 		p = 0
 		depth = 1
 		last_action = -1
+
+		if step_by_step:
+			step_by_step_prob = []
 
 		for action in path:
 			_, action_distribution = nn_model.predict(np.array([child.get_image_representation()]))
@@ -608,9 +612,32 @@ class Bootstrap:
 			depth = node.get_g() + 1
 			last_action = action
 
-		state.clear_path()
+			if step_by_step:
+				step_by_step_prob.append(math.exp(probability_distribution_log[action]))
 
-		return math.exp(p)
+		state.clear_path()
+		if step_by_step:
+			return step_by_step_prob
+		else:
+			return math.exp(p)
+
+	def mult_verify_current_probabilities_step_by_step(self, solutions, models, step_by_step_probabilities):
+		"""Returns the update dictionary of average step by step probabilities, using the solution path found in the training of the ordering CNN (CNN1)"""
+		puzzles_prob = {}
+		print("Verifying current average step by step solution probabilities for the", len(models), "models ...")
+		for puzzle in self._states.keys():
+			list_of_probs = []
+			for model in models:
+				step_by_step_prob = self.verify_path_probability(self._states[puzzle], solutions[puzzle], model, True)
+				list_of_probs.append(step_by_step_prob)
+			list_of_probs = np.sum(list_of_probs, axis=0)
+			avg_step_by_step_probs = []
+			for i in range(len(list_of_probs)):
+				avg_step_by_step_probs.append(list_of_probs[i]/len(models))
+
+			step_by_step_probabilities[puzzle].append(avg_step_by_step_probs)
+
+		return step_by_step_probabilities
 
 	def mult_verify_current_probabilities(self, solutions, models):
 		"""Returns an array with the current average probabilities of solution for every puzzle between each model, using the solution path found in the training of the ordering CNN (CNN1)"""
@@ -658,6 +685,115 @@ class Bootstrap:
 
 		model.save_weights(join(self._models_folder, 'model_weights'))
 		return loss
+
+	def select_puzzles_according_to_step_prob(self, step_by_step_probabilities, curriculum_size=9):
+		min_max_steps = {}  # Holds both min and max_steps for each puzzle for further comparison of the variance
+		for puzzle in step_by_step_probabilities.keys():
+			min_steps = [1 for _ in range(len(step_by_step_probabilities[puzzle][0]))]
+			max_steps = [0 for _ in range(len(step_by_step_probabilities[puzzle][0]))]
+
+			with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
+				result_file.write("{:s}:".format(puzzle))
+				result_file.write('\n')
+
+			for iteration in step_by_step_probabilities[puzzle]:
+				with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
+					result_file.write("\t[")
+
+				for step in iteration:
+					with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
+						result_file.write(" {:f}".format(step))
+					i = iteration.index(step)
+					if step < min_steps[i]:
+						min_steps[i] = step
+					if step > max_steps[i]:
+						max_steps[i] = step
+
+				with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
+					result_file.write(" ]")
+					result_file.write('\n')
+
+			with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
+				result_file.write('\n')
+			min_max_steps[puzzle] = [min_steps, max_steps]
+
+		variation_steps = {}
+		for p in min_max_steps.keys():
+			# Subtraction of max of step i minus min of step i (variation)
+			variation_steps[p] = [(min_max_steps[p][1][i] - min_max_steps[p][0][i]) for i in range(len(min_max_steps[p][0]))]
+			variation_steps[p] = np.max(variation_steps[p])
+
+		variation_steps = sorted(variation_steps.items(), key=lambda x: x[1], reverse=True)
+
+		cur_size = 0
+		for p in variation_steps:
+			with open(join(self._log_folder + self._model_name + '_biggest_variation'), 'a') as result_file:
+				result_file.write("{:s}, {:f}".format(p[0], p[1]))
+				result_file.write('\n')
+			if cur_size < curriculum_size:
+				with open(join(self._log_folder + self._model_name + '_curriculum'), 'a') as result_file:
+					result_file.write("{:s}".format(p[0]))
+					result_file.write('\n')
+				cur_size += 1
+
+	def _curriculum_selection_only_select_at_end(self, models, solutions, solved_blocks):
+		print("STARTING CURRICULUM SELECTION STEP BY STEP!")
+		marker = 1  # Used to tell the current solved block for training
+		batch_problems = {}
+		trained_puzzles = set()
+		step_by_step_probabilities = {}
+
+		for puzzle in self._states.keys():  # Creates an dictionary where the probabilities step by step will be recorded after each training iteration
+			step_by_step_probabilities[puzzle] = []
+
+		iteration = 1
+		memory = Memory()
+
+		step_by_step_probabilities = self.mult_verify_current_probabilities_step_by_step(solutions, models, step_by_step_probabilities)  # Verifying with new CNN (CNN2 with random initialization)
+
+		trajectories = {}  # Trajectories from puzzles of this iteration
+		# Train with all puzzles in the first solved block
+		for p in solved_blocks[marker].keys():
+			batch_problems[p] = self._states[p]
+			trajectories[p] = solved_blocks[marker][p]
+			del self._states[p]  # Clear dictionary of the states that were already solved
+		gc.collect()
+
+		while len(trained_puzzles) < self._number_problems:
+			for p in batch_problems.keys():
+				trained_puzzles.add(p)
+				memory.add_trajectory(trajectories[p])
+
+			print("Training with", batch_problems.keys(), 'from block', marker)
+
+			memory.preprocess_data()
+			print('preprocessed pairs:', len(memory.get_preprocessed_pairs()))
+			with ProcessPoolExecutor(max_workers=self._ncpus) as executor:
+				args = ((model, memory, 1024) for model in models)
+				results = executor.map(self.train_model, args)
+			for result in results:
+				last_loss = result
+				print('last_loss:', last_loss)
+
+			step_by_step_probabilities = self.mult_verify_current_probabilities_step_by_step(solutions, models, step_by_step_probabilities)
+
+			iteration += 1
+			marker += 1
+			if marker > len(solved_blocks.keys()):
+				break
+			batch_problems = {}
+			trajectories = {}  # Trajectories from puzzles of this iteration
+			# Train with all puzzles in the next solved block
+			for p in solved_blocks[marker].keys():
+				batch_problems[p] = self._states[p]
+				trajectories[p] = solved_blocks[marker][p]
+				del self._states[p]  # Clear dictionary of the states that were already solved
+			gc.collect()
+
+			print("Training with", batch_problems.keys(), 'from block', marker)
+
+		print(step_by_step_probabilities)
+		self.select_puzzles_according_to_step_prob(step_by_step_probabilities)
 
 	def _curriculum_selection_only(self, models, ordering, solutions, solved_blocks):
 		print("STARTING CURRICULUM SELECTION!")
@@ -762,10 +898,11 @@ class Bootstrap:
 
 			iteration += 1
 			new_batch_problems = {}
+			print("batch_problems:", batch_problems)
 			for p in batch_problems.keys():  # Create a new training batch without puzzles already solved
 				if p not in current_solved_puzzles:
 					new_batch_problems[p] = batch_problems[p]
-
+			print("new_batch_problems:", new_batch_problems)
 			batch_problems = new_batch_problems
 		#tracemalloc.stop()  # For memory usage tests only, comment when sending to cluster!!!
 
@@ -1304,7 +1441,8 @@ class Bootstrap:
 				"""current, peak = tracemalloc.get_traced_memory()
 				print('Current memory usage is', str(round((current/10**6), 2)) + 'MB', 'with peak of', str(round((peak/10**6), 2)) + 'MB')"""
 
-				self._curriculum_selection_only(selector_models, ordering, solutions, solved_blocks)
+				# self._curriculum_selection_only(selector_models, ordering, solutions, solved_blocks)
+				self._curriculum_selection_only_select_at_end(selector_models, solutions, solved_blocks)
 
 	def solve_problems(self, planner, nn_model, ordering=None, solutions=None, cur_gen=False):
 		if self._scheduler == 'gbs':
