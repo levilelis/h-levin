@@ -687,10 +687,10 @@ class Bootstrap:
 		return loss
 
 	def select_puzzles_according_to_step_prob(self, step_by_step_probabilities, curriculum_size=9):
-		min_max_steps = {}  # Holds both min and max_steps for each puzzle for further comparison of the variance
+		# min_max_steps = {}  # Holds both min and max_steps for each puzzle for further comparison of the variance
 		for puzzle in step_by_step_probabilities.keys():
-			min_steps = [1 for _ in range(len(step_by_step_probabilities[puzzle][0]))]
-			max_steps = [0 for _ in range(len(step_by_step_probabilities[puzzle][0]))]
+			"""min_steps = [1 for _ in range(len(step_by_step_probabilities[puzzle][0]))]  # Used when getting max variation
+			max_steps = [0 for _ in range(len(step_by_step_probabilities[puzzle][0]))]"""
 
 			with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
 				result_file.write("{:s}:".format(puzzle))
@@ -702,12 +702,12 @@ class Bootstrap:
 
 				for step in iteration:
 					with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
-						result_file.write(" {:f}".format(step))
-					i = iteration.index(step)
-					if step < min_steps[i]:
+						result_file.write(" {:e}".format(step))
+					"""i = iteration.index(step)  # Used when getting max variation
+					if step < min_steps[i]:  
 						min_steps[i] = step
 					if step > max_steps[i]:
-						max_steps[i] = step
+						max_steps[i] = step"""
 
 				with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
 					result_file.write(" ]")
@@ -715,9 +715,30 @@ class Bootstrap:
 
 			with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
 				result_file.write('\n')
-			min_max_steps[puzzle] = [min_steps, max_steps]
+			# min_max_steps[puzzle] = [min_steps, max_steps]  # Used when getting max variation
 
-		variation_steps = {}
+		smallest_step_probs_last_iteration = {}
+		for puzzle in step_by_step_probabilities.keys():  # Gets smallest probability of a step in the last iteration
+			smallest_prob = 1
+			for step in step_by_step_probabilities[puzzle][-1]:
+				if step < smallest_prob:
+					smallest_prob = step
+			smallest_step_probs_last_iteration[puzzle] = smallest_prob
+
+		smallest_step_probs_last_iteration = sorted(smallest_step_probs_last_iteration.items(), key=lambda x: x[1], reverse=False)
+
+		cur_size = 0
+		for p in smallest_step_probs_last_iteration:
+			if cur_size < curriculum_size:
+				with open(join(self._log_folder + self._model_name + '_curriculum'), 'a') as result_file:
+					result_file.write("{:s}".format(p[0]))
+					result_file.write('\n')
+				cur_size += 1
+			with open(join(self._log_folder + self._model_name + '_smallest_step_prob_last_iter'), 'a') as result_file:
+				result_file.write("{:s}, {:e}".format(p[0], p[1]))
+				result_file.write('\n')
+
+		"""variation_steps = {}  # Used when getting max variation
 		for p in min_max_steps.keys():
 			# Subtraction of max of step i minus min of step i (variation)
 			variation_steps[p] = [(min_max_steps[p][1][i] - min_max_steps[p][0][i]) for i in range(len(min_max_steps[p][0]))]
@@ -734,7 +755,7 @@ class Bootstrap:
 				with open(join(self._log_folder + self._model_name + '_curriculum'), 'a') as result_file:
 					result_file.write("{:s}".format(p[0]))
 					result_file.write('\n')
-				cur_size += 1
+				cur_size += 1"""
 
 	def _curriculum_selection_only_select_at_end(self, models, solutions, solved_blocks):
 		print("STARTING CURRICULUM SELECTION STEP BY STEP!")
@@ -756,8 +777,6 @@ class Bootstrap:
 		for p in solved_blocks[marker].keys():
 			batch_problems[p] = self._states[p]
 			trajectories[p] = solved_blocks[marker][p]
-			del self._states[p]  # Clear dictionary of the states that were already solved
-		gc.collect()
 
 		while len(trained_puzzles) < self._number_problems:
 			for p in batch_problems.keys():
@@ -787,8 +806,6 @@ class Bootstrap:
 			for p in solved_blocks[marker].keys():
 				batch_problems[p] = self._states[p]
 				trajectories[p] = solved_blocks[marker][p]
-				del self._states[p]  # Clear dictionary of the states that were already solved
-			gc.collect()
 
 			print("Training with", batch_problems.keys(), 'from block', marker)
 
