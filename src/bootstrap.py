@@ -688,9 +688,10 @@ class Bootstrap:
 
 	def select_puzzles_according_to_step_prob(self, step_by_step_probabilities, curriculum_size=9):
 		# min_max_steps = {}  # Holds both min and max_steps for each puzzle for further comparison of the variance
+		puzzles_min_steps = {}  # Holds the min probability of some step in the solution path during all iterations per puzzle
 		for puzzle in step_by_step_probabilities.keys():
-			"""min_steps = [1 for _ in range(len(step_by_step_probabilities[puzzle][0]))]  # Used when getting max variation
-			max_steps = [0 for _ in range(len(step_by_step_probabilities[puzzle][0]))]"""
+			min_steps = [1 for _ in range(len(step_by_step_probabilities[puzzle][0]))]
+			"""max_steps = [0 for _ in range(len(step_by_step_probabilities[puzzle][0]))]""" # Used when getting max variation
 
 			with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
 				result_file.write("{:s}:".format(puzzle))
@@ -703,10 +704,10 @@ class Bootstrap:
 				for step in iteration:
 					with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
 						result_file.write(" {:e}".format(step))
-					"""i = iteration.index(step)  # Used when getting max variation
+					i = iteration.index(step)
 					if step < min_steps[i]:  
 						min_steps[i] = step
-					if step > max_steps[i]:
+					"""if step > max_steps[i]: # Used when getting max variation
 						max_steps[i] = step"""
 
 				with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
@@ -715,9 +716,10 @@ class Bootstrap:
 
 			with open(join(self._log_folder + self._model_name + '_step_by_step_probs'), 'a') as result_file:
 				result_file.write('\n')
+			puzzles_min_steps[puzzle] = min_steps
 			# min_max_steps[puzzle] = [min_steps, max_steps]  # Used when getting max variation
 
-		smallest_step_probs_last_iteration = {}
+		"""smallest_step_probs_last_iteration = {}
 		for puzzle in step_by_step_probabilities.keys():  # Gets smallest probability of a step in the last iteration
 			smallest_prob = 1
 			for step in step_by_step_probabilities[puzzle][-1]:
@@ -725,16 +727,22 @@ class Bootstrap:
 					smallest_prob = step
 			smallest_step_probs_last_iteration[puzzle] = smallest_prob
 
-		smallest_step_probs_last_iteration = sorted(smallest_step_probs_last_iteration.items(), key=lambda x: x[1], reverse=False)
+		smallest_step_probs_last_iteration = sorted(smallest_step_probs_last_iteration.items(), key=lambda x: x[1], reverse=False)"""
 
+		for p in puzzles_min_steps.keys():
+			puzzles_min_steps[p] = np.min(puzzles_min_steps[p])
+
+		puzzles_min_steps = sorted(puzzles_min_steps.items(), key=lambda x: x[1], reverse=False)
+		print(puzzles_min_steps)
 		cur_size = 0
-		for p in smallest_step_probs_last_iteration:
+		# for p in smallest_step_probs_last_iteration:
+		for p in puzzles_min_steps:
 			if cur_size < curriculum_size:
 				with open(join(self._log_folder + self._model_name + '_curriculum'), 'a') as result_file:
 					result_file.write("{:s}".format(p[0]))
 					result_file.write('\n')
 				cur_size += 1
-			with open(join(self._log_folder + self._model_name + '_smallest_step_prob_last_iter'), 'a') as result_file:
+			with open(join(self._log_folder + self._model_name + '_smallest_step_prob'), 'a') as result_file:
 				result_file.write("{:s}, {:e}".format(p[0], p[1]))
 				result_file.write('\n')
 
