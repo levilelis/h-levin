@@ -1389,8 +1389,14 @@ class Bootstrap:
 					ordering.append([puzzle_name, self._states[puzzle_name]])
 
 					print(puzzle_name, 'pi:', puzzle_solution_pi)
+					with open(join(self._log_folder + 'training_bootstrap_' + self._model_name + '_puzzles_details'), 'a') as result_file:
+						result_file.write("{:s}, pi: {:e}, b: {:d}, exp: {:d}, gen: {:d}, sol: ".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name], result[2], result[3]))
+						for action in solution:
+							result_file.write(("{:d} ".format(action)))
+						result_file.write('\n')
+
 					with open(join(self._log_folder + 'training_bootstrap_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
-						result_file.write("{:s}, {:e}, {:d}, ".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
+						result_file.write("{:s}, {:e}, {:d},".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
 						for action in solution:
 							result_file.write(("{:d} ".format(action)))
 						result_file.write('\n')
