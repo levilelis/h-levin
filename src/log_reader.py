@@ -76,6 +76,45 @@ class LogReader:
 
         return puzzles_solutions
 
+    def read_logs_get_puzzle_solutions(self, file):
+        print("Ordering puzzles by the longest solution path...")
+        puzzles_solutions = {}
+
+        with open(join(self.log_folder, file), "r") as stream:
+            for line in stream:
+                data = line.split('\n')
+                if not len(line.split(', ')) == 1:
+                    puzzle = data[0].split(', ')[0]
+                    solution = data[0].split(', ')[3].split(' ')[:-1]
+                    puzzles_solutions[puzzle] = solution
+
+        puzzles_solutions = sorted(puzzles_solutions.items(), key=lambda x: len(x[1]), reverse=True)
+
+        with open(join(self.log_folder + "longest_solution_order_" + file), "a") as result:
+            for puzzle in puzzles_solutions:
+                result.write("{:s}, len: {:d}, sol: ".format(puzzle[0], len(puzzle[1])))
+                for step in puzzle[1]:
+                    result.write("{:d} ".format(int(step)))
+                result.write("\n")
+
+    def read_logs_most_expanded(self, file):
+        print("Ordering puzzles by the most expanded nodes...")
+        puzzles_exp = {}
+
+        with open(join(self.log_folder, file), "r") as stream:
+            for line in stream:
+                data = line.split('\n')
+                puzzle = data[0].split(', ')[0]
+                expanded = int(data[0].split(', ')[3].split(':')[1])
+                puzzles_exp[puzzle] = expanded
+
+        puzzles_exp = sorted(puzzles_exp.items(), key=lambda x: x[1], reverse=True)
+
+        with open(join(self.log_folder + "most_expanded_order_" + file), "a") as result:
+            for puzzle in puzzles_exp:
+                result.write("{:s}, exp: {:d}".format(puzzle[0], puzzle[1]))
+                result.write("\n")
+
     def compute_average_ordering(self, seed_iterations_names):
         print("Computing average ordering...")
         self._names_sum_iterations = {}
@@ -240,7 +279,11 @@ class TrajectoryGenerator:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', action='store', dest='log_folder',
+
+    parser.add_argument('-f', action='store', dest='file',
+                        help='The name of only 1 file to work with')  # Used only on --other mode
+
+    parser.add_argument('-lf', action='store', dest='log_folder',
                         help='Folder in which the logs are found (used for average ordering)')
 
     parser.add_argument('-o', action='store', dest='ordering_file',
@@ -257,12 +300,20 @@ def main():
 
     parser.add_argument('--spread', action='store_true', dest='spread_gen',
                         help='Sets the generate spread curriculum mode')
-    
+
+    parser.add_argument('--other', action='store_true', dest='other',
+                        help='Do alternative analysis with puzzle ordering files')
+
     parameters = parser.parse_args()
 
     if parameters.spread_gen:  # Spread generation
         log_reader = LogReader("")
         log_reader.generate_spread_curriculum(parameters.puzzles_ordering, parameters.spread_file, parameters.size)
+
+    elif parameters.other:  # Longest solution path
+        log_reader = LogReader("")
+        # log_reader.read_logs_get_puzzle_solutions(parameters.file)
+        log_reader.read_logs_most_expanded(parameters.file)
 
     else:  # Average ordering generation
         log_reader = LogReader(parameters.log_folder)

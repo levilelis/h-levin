@@ -1396,7 +1396,7 @@ class Bootstrap:
 						result_file.write('\n')
 
 					with open(join(self._log_folder + 'training_bootstrap_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
-						result_file.write("{:s}, {:e}, {:d},".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
+						result_file.write("{:s}, {:e}, {:d}, ".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
 						for action in solution:
 							result_file.write(("{:d} ".format(action)))
 						result_file.write('\n')

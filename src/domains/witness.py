@@ -50,6 +50,8 @@ class WitnessState(Environment):
         """
         self._v_seg = np.zeros((lines, columns+1))
         self._h_seg = np.zeros((lines+1, columns))
+        self._v_blocked = np.zeros((lines, columns+1))
+        self._h_blocked = np.zeros((lines+1, columns))
         self._dots = np.zeros((lines+1, columns+1))
         self._cells = np.zeros((lines, columns))
 
@@ -146,6 +148,14 @@ class WitnessState(Environment):
         
         self._v_seg = np.rot90(self._v_seg, 1)
         self._h_seg = np.rot90(self._h_seg, 1)
+
+        v_blocked = self._v_blocked
+        self._v_blocked = self._h_blocked
+        self._h_blocked = v_blocked
+
+        self._v_blocked = np.rot90(self._v_blocked, 1)
+        self._h_blocked = np.rot90(self._h_blocked, 1)
+
         self._dots = np.rot90(self._dots, 1)
         self._cells = np.rot90(self._cells, 1)
         columns = self._columns
@@ -159,6 +169,8 @@ class WitnessState(Environment):
         
         self._v_seg = np.flipud(self._v_seg)
         self._h_seg = np.flipud(self._h_seg)
+        self._h_blocked = np.flipud(self._v_seg)
+        self._h_blocked = np.flipud(self._h_seg)
         self._dots = np.flipud(self._dots)
         self._cells = np.flipud(self._cells)
     
@@ -176,7 +188,7 @@ class WitnessState(Environment):
         """
                 
         number_of_colors = 4
-        channels = 9
+        channels = 10
         
         #defining the 3-dimnesional array that will be filled with the puzzle's information 
         image = np.zeros((2 * self._max_lines, 2 * self._max_columns, channels))
@@ -221,7 +233,23 @@ class WitnessState(Environment):
         #channel for the entrance of the puzzle
         channel_number += 1
         image[2*self._line_init][2*self._column_init][channel_number] = 1
-        
+
+        #channel for the blocked paths
+        channel_number += 1
+        for i in range(0, self._v_blocked.shape[0]):
+            for j in range(0, self._v_blocked.shape[1]):
+                if self._v_blocked[i][j] == 1:
+                    image[2*i][2*j][channel_number] = 1
+                    image[2*i+1][2*j][channel_number] = 1
+                    image[2*i+2][2*j][channel_number] = 1
+
+        for i in range(0, self._h_blocked.shape[0]):
+            for j in range(0, self._h_blocked.shape[1]):
+                if self._h_blocked[i][j] == 1:
+                    image[2*i][2*j][channel_number] = 1
+                    image[2*i][2*j+1][channel_number] = 1
+                    image[2*i][2*j+2][channel_number] = 1
+
         return image
     
     def distance_images(self, other):
@@ -338,6 +366,8 @@ class WitnessState(Environment):
         self._h_seg = np.zeros((self._lines+1, self._columns))
         self._dots = np.zeros((self._lines+1, self._columns+1))
         self._cells = np.zeros((self._lines, self._columns))
+        self._v_blocked = np.zeros((self._lines, self._columns+1))
+        self._h_blocked = np.zeros((self._lines+1, self._columns))
         
         self._line_tip = self._line_init
         self._column_tip = self._column_init
@@ -470,16 +500,16 @@ class WitnessState(Environment):
         """
         children = []
         # move up
-        if state[0]+1 < self._cells.shape[0] and self._h_seg[state[0]+1][state[1]] == 0:
+        if state[0]+1 < self._cells.shape[0] and self._h_seg[state[0]+1][state[1]] == 0 and self._h_blocked[state[0]+1][state[1]] == 0:
             children.append((state[0]+1, state[1]))
         # move down
-        if state[0] > 0 and self._h_seg[state[0]][state[1]] == 0:
+        if state[0] > 0 and self._h_seg[state[0]][state[1]] == 0 and self._h_blocked[state[0]][state[1]] == 0:
             children.append((state[0]-1, state[1]))
         # move right
-        if state[1]+1 < self._cells.shape[1] and self._v_seg[state[0]][state[1]+1] == 0:
+        if state[1]+1 < self._cells.shape[1] and self._v_seg[state[0]][state[1]+1] == 0 and self._v_blocked[state[0]][state[1]+1] == 0:
             children.append((state[0], state[1]+1))
         # move left
-        if state[1] > 0 and self._v_seg[state[0]][state[1]] == 0:
+        if state[1] > 0 and self._v_seg[state[0]][state[1]] == 0 and self._v_blocked[state[0]][state[1]] == 0:
             children.append((state[0], state[1]-1))
         return children
     
@@ -505,16 +535,16 @@ class WitnessState(Environment):
 #         if self.has_tip_reached_goal():
 #             return actions
         #moving up
-        if op != 1 and self._line_tip + 1 < self._dots.shape[0] and self._v_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip+1][self._column_tip] == 0:
+        if op != 1 and self._line_tip + 1 < self._dots.shape[0] and self._v_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip+1][self._column_tip] == 0 and self._v_blocked[self._line_tip][self._column_tip] == 0:
             actions.append(0)
         #moving down
-        if op != 0 and self._line_tip - 1 >= 0 and self._v_seg[self._line_tip-1][self._column_tip] == 0 and self._dots[self._line_tip-1][self._column_tip] == 0:
+        if op != 0 and self._line_tip - 1 >= 0 and self._v_seg[self._line_tip-1][self._column_tip] == 0 and self._dots[self._line_tip-1][self._column_tip] == 0 and self._v_blocked[self._line_tip-1][self._column_tip] == 0:
             actions.append(1)
         #moving right
-        if op != 3 and self._column_tip + 1 < self._dots.shape[1] and self._h_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip][self._column_tip+1] == 0:
+        if op != 3 and self._column_tip + 1 < self._dots.shape[1] and self._h_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip][self._column_tip+1] == 0 and self._h_blocked[self._line_tip][self._column_tip] == 0:
             actions.append(2)
         #moving left
-        if op != 2 and self._column_tip - 1 >= 0 and self._h_seg[self._line_tip][self._column_tip-1] == 0 and self._dots[self._line_tip][self._column_tip-1] == 0:
+        if op != 2 and self._column_tip - 1 >= 0 and self._h_seg[self._line_tip][self._column_tip-1] == 0 and self._dots[self._line_tip][self._column_tip-1] == 0 and self._h_blocked[self._line_tip][self._column_tip-1] == 0:
             actions.append(3)
         return actions
         
@@ -537,16 +567,16 @@ class WitnessState(Environment):
 #         if self.has_tip_reached_goal():
 #             return actions
         #moving up
-        if self._line_tip + 1 < self._dots.shape[0] and self._v_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip+1][self._column_tip] == 0:
+        if self._line_tip + 1 < self._dots.shape[0] and self._v_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip+1][self._column_tip] == 0 and self._v_blocked[self._line_tip][self._column_tip] == 0:
             actions.append(0)
         #moving down
-        if self._line_tip - 1 >= 0 and self._v_seg[self._line_tip-1][self._column_tip] == 0 and self._dots[self._line_tip-1][self._column_tip] == 0:
+        if self._line_tip - 1 >= 0 and self._v_seg[self._line_tip-1][self._column_tip] == 0 and self._dots[self._line_tip-1][self._column_tip] == 0 and self._v_blocked[self._line_tip-1][self._column_tip] == 0:
             actions.append(1)
         #moving right
-        if self._column_tip + 1 < self._dots.shape[1] and self._h_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip][self._column_tip+1] == 0:
+        if self._column_tip + 1 < self._dots.shape[1] and self._h_seg[self._line_tip][self._column_tip] == 0 and self._dots[self._line_tip][self._column_tip+1] == 0 and self._h_blocked[self._line_tip][self._column_tip] == 0:
             actions.append(2)
         #moving left
-        if self._column_tip - 1 >= 0 and self._h_seg[self._line_tip][self._column_tip-1] == 0 and self._dots[self._line_tip][self._column_tip-1] == 0:
+        if self._column_tip - 1 >= 0 and self._h_seg[self._line_tip][self._column_tip-1] == 0 and self._dots[self._line_tip][self._column_tip-1] == 0 and self._h_blocked[self._line_tip][self._column_tip-1] == 0:
             actions.append(3)
         return actions
     
@@ -837,6 +867,16 @@ class WitnessState(Environment):
                 for t in values:
                     numbers = t.split(' ')
                     self._cells[int(numbers[0])][int(numbers[1])] = int(numbers[2])
+            if 'Blocked_v: |' in s:
+                values = s.replace('Blocked_v: |', '').split('|')
+                for t in values:
+                    numbers = t.split(' ')
+                    self._v_blocked[int(numbers[0])][int(numbers[1])] = 1
+            if 'Blocked_h: |' in s:
+                values = s.replace('Blocked_h: |', '').split('|')
+                for t in values:
+                    numbers = t.split(' ')
+                    self._h_blocked[int(numbers[0])][int(numbers[1])] = 1
                     
     def heuristic_value(self):
         return abs(self._column_tip - self._column_goal) + abs(self._line_tip - self._line_goal)
