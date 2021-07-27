@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import matplotlib
 from domains.environment import Environment
@@ -605,7 +607,59 @@ class WitnessState(Environment):
             self._h_seg[self._line_tip][self._column_tip-1] = 1
             self._dots[self._line_tip][self._column_tip-1] = 1
             self._column_tip -= 1
-                
+
+    def generate_blocked_paths(self):
+        # How many vertical and horizontal paths there are
+        v_size = self._v_seg.shape[0] * self._v_seg.shape[1]
+        h_size = self._h_seg.shape[0] * self._h_seg.shape[1]
+
+        # Vertical and horizontal paths used/unused on solution
+        v_used = 0
+        h_used = 0
+        v_unused = []
+        h_unused = []
+
+        for i in range(self._v_seg.shape[0]):
+            for j in range(self._v_seg.shape[1]):
+                if self._v_seg[i][j] == 1:
+                    v_used += 1
+                else:
+                    v_unused.append([i, j])
+
+        for i in range(self._h_seg.shape[0]):
+            for j in range(self._h_seg.shape[1]):
+                if self._h_seg[i][j] == 1:
+                    h_used += 1
+                else:
+                    h_unused.append([i, j])
+
+        # Only 25% of vertical and horizontal non-used paths will be blocked
+        v_blocks = math.ceil((v_size - v_used)*0.25)
+        h_blocks = math.ceil((h_size - h_used)*0.25)
+
+        # Blocks put counter
+        v_blocks_used = 0
+        h_blocks_used = 0
+
+        # Randomly input blocks on unused paths
+        while v_blocks_used < v_blocks:
+            r = random.randint(0, len(v_unused)-1)
+            i = v_unused[r][0]
+            j = v_unused[r][1]
+
+            self._v_blocked[i][j] = 1
+            v_unused.pop(r)
+            v_blocks_used += 1
+
+        while h_blocks_used < h_blocks:
+            r = random.randint(0, len(h_unused)-1)
+            i = h_unused[r][0]
+            j = h_unused[r][1]
+
+            self._h_blocked[i][j] = 1
+            h_unused.pop(r)
+            h_blocks_used += 1
+
     def has_tip_reached_goal(self):
         """
         Verifies whether the snake has reached the goal position. Note this is not a goal
@@ -727,12 +781,17 @@ class WitnessState(Environment):
         Here's an example of a file of a puzzle with 5 lines and 4 columns, with the snake
         starting position at 0, 0 and finishing position at 5, 4. The state has three bullets,
         each with a different color (1, 2, and 6). The bullets are located at (0,0), (2,2), (3, 3), 
-        and (2, 0). Here the first number means the line and the second the column. 
+        and (2, 0). Here the first number means the line and the second the column. At last, the Blocked_v
+        and Block_h are paths blocked vertically or horizontally, the numbers means (line, column), the idea
+        is the same for v_seg and h_seg, but here the path is blocked by default and not because the current path
+        already passed on those places.
         
         Size: 5 4
         Init: 0 0
         Goal: 5 4
         Colors: |0 0 1|2 2 2|3 3 6|2 0 1
+        Blocked_v: |0 2|3 1
+        Blocked_h: |1 0
         
         """
         file = open(filename, 'w')
@@ -755,7 +814,21 @@ class WitnessState(Environment):
                 for j in range(self._cells.shape[1]):
                     if self._cells[i][j] != 0:
                         file.write('|' + str(i) + ' ' + str(j) + ' ' + str(int(self._cells[i][j])))
-            file.close()
+        file.write('\n')
+
+        file.write('Blocked_v: ')
+        for i in range(self._v_blocked.shape[0]):
+            for j in range(self._v_blocked.shape[1]):
+                if self._v_blocked[i][j] != 0:
+                    file.write('|' + str(i) + ' ' + str(j))
+        file.write('\n')
+
+        file.write('Blocked_h: ')
+        for i in range(self._h_blocked.shape[0]):
+            for j in range(self._h_blocked.shape[1]):
+                if self._h_blocked[i][j] != 0:
+                    file.write('|' + str(i) + ' ' + str(j))
+        file.close()
             
     def convert_2_dict(self):
         """

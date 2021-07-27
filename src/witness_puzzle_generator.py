@@ -24,7 +24,7 @@ class PuzzleGenerator:
                 filled_with_color = True
         return filled_with_color
         
-    def generate_random_path(self, lines, columns, line_init, column_init, line_goal, column_goal):
+    def generate_random_path(self, lines, columns, line_init, column_init, line_goal, column_goal, gen_blocked):
         """
         Generates a solution path for a grid with starting position at (line_init, column_init)
         and finishing position at (line_goal, column_goal). The grid is defined by a grid of size
@@ -39,26 +39,28 @@ class PuzzleGenerator:
                 rand_action = random.randint(0, len(actions)-1)
                 state.apply_action(actions[rand_action])
                 if state.has_tip_reached_goal():
+                    if gen_blocked:  # Generate puzzles with blocked paths
+                        state.generate_blocked_paths()
                     return state
                 actions = state.successors()
-    
-    
+
     def generate_puzzles_of_size(self, input_data):
         
         size = input_data[0]
         minimum_number_regions = input_data[1]
         color_bullets = input_data[2]
         bullet_probability = input_data[3]
+        gen_blocked = input_data[4]
           
         states = []
         for i in range(1, size[1] + 1):
             #lines, columns, line_init, column_init, line_goal, column_goal
-            states.append(self.generate_random_path(size[0], size[1], 0, 0, 0, i))
-            states.append(self.generate_random_path(size[0], size[1], 0, 0, size[0], i))
+            states.append(self.generate_random_path(size[0], size[1], 0, 0, 0, i, gen_blocked))
+            states.append(self.generate_random_path(size[0], size[1], 0, 0, size[0], i, gen_blocked))
         for i in range(1, size[0] + 1):
             #lines, columns, line_init, column_init, line_goal, column_goal
-            states.append(self.generate_random_path(size[0], size[1], 0, 0, i, 0))
-            states.append(self.generate_random_path(size[0], size[1], 0, 0, i, size[1]))
+            states.append(self.generate_random_path(size[0], size[1], 0, 0, i, 0, gen_blocked))
+            states.append(self.generate_random_path(size[0], size[1], 0, 0, i, size[1], gen_blocked))
         
 #             np.random.shuffle(states)
         filled_states = []
@@ -84,7 +86,7 @@ class PuzzleGenerator:
         
         return filled_states
                 
-    def generate_puzzles_with_random_paths(self, puzzle_size, bullet_probability, color_bullets, time_limit, puzzle_folder, number_puzzles, ncpus):
+    def generate_puzzles_with_random_paths(self, puzzle_size, bullet_probability, color_bullets, time_limit, puzzle_folder, number_puzzles, ncpus, gen_blocked):
         """
         Generates a set of puzzles for the sizes given in puzzle_sizes. Currently the puzzles
         have their starting position at (0, 0) and any finishing position at the edge of the grid. 
@@ -105,7 +107,7 @@ class PuzzleGenerator:
         while time.time() - start_time < time_limit - 10 and len(puzzles_generated) < number_puzzles:
             
             with ProcessPoolExecutor(max_workers = ncpus) as executor:
-                args = ((puzzle_size, minimum_number_regions, color_bullets, bullet_probability) for _ in range(10 * ncpus)) 
+                args = ((puzzle_size, minimum_number_regions, color_bullets, bullet_probability, gen_blocked) for _ in range(10 * ncpus))
                 results = executor.map(self.generate_puzzles_of_size, args)
                 
                 for result in results:
@@ -118,7 +120,10 @@ class PuzzleGenerator:
                             puzzles_generated.add(puzzle)        
         puzzle_id = 1
         for puzzle in puzzles_generated:
-            puzzle.save_state(puzzle_folder + '/' + str(puzzle_size[0]) + 'x' + str(puzzle_size[1]) + '_' + str(puzzle_id))
+            if gen_blocked:
+                puzzle.save_state(puzzle_folder + '/' + str(puzzle_size[0]) + 'x' + str(puzzle_size[1]) + '_' + str(puzzle_id) + '_b')
+            else:
+                puzzle.save_state(puzzle_folder + '/' + str(puzzle_size[0]) + 'x' + str(puzzle_size[1]) + '_' + str(puzzle_id))
             
             if puzzle_id == number_puzzles:
                 break
@@ -157,6 +162,10 @@ def main():
     parser.add_argument('-n', action='store', dest='number_puzzles', 
                         default=1000, 
                         help='Number of puzzles to be generated')
+
+    parser.add_argument('--blocked', action='store_true', dest='generate_blocked',
+                        default=False,
+                        help='Generate puzzles with blocked paths')
     
     parameters = parser.parse_args()
     
@@ -174,7 +183,8 @@ def main():
                                                  int(parameters.time_limit), 
                                                  parameters.puzzle_folder,
                                                  int(parameters.number_puzzles),
-                                                 ncpus)
+                                                 ncpus,
+                                                 parameters.generate_blocked)
             
 if __name__ == "__main__":
     main()
