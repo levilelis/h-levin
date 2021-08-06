@@ -39,8 +39,8 @@ class PuzzleGenerator:
                 rand_action = random.randint(0, len(actions)-1)
                 state.apply_action(actions[rand_action])
                 if state.has_tip_reached_goal():
-                    if gen_blocked:  # Generate puzzles with blocked paths
-                        state.generate_blocked_paths()
+                    """if gen_blocked:  # Generate puzzles with blocked paths
+                        state.generate_blocked_paths()"""
                     return state
                 actions = state.successors()
 
@@ -70,7 +70,7 @@ class PuzzleGenerator:
             
             if len(regions) < minimum_number_regions:
                 continue
-            
+
             used_colors = set()
             for region in regions:
                 color = np.random.randint(1, high=len(color_bullets) + 1)
@@ -78,10 +78,13 @@ class PuzzleGenerator:
                     color = np.random.randint(1, high=len(color_bullets)+1)
                 if self.fill_region(state, region, color, bullet_probability):
                     used_colors.add(color)
-                    
+
             if len(used_colors) < 2:
-                continue  
-            
+                continue
+
+            if gen_blocked:  # Generate puzzles with blocked paths
+                state.generate_blocked_paths()
+
             filled_states.append(state)                         
         
         return filled_states
@@ -104,27 +107,38 @@ class PuzzleGenerator:
         if puzzle_size[0] >= 10:
             minimum_number_regions = 5                
         
-        while time.time() - start_time < time_limit - 10 and len(puzzles_generated) < number_puzzles:
-            
-            with ProcessPoolExecutor(max_workers = ncpus) as executor:
-                args = ((puzzle_size, minimum_number_regions, color_bullets, bullet_probability, gen_blocked) for _ in range(10 * ncpus))
-                results = executor.map(self.generate_puzzles_of_size, args)
-                
-                for result in results:
-                    puzzles = result
-                
-                    for puzzle in puzzles:
-                        puzzle.clear_path()
-                    
-                        if puzzle not in puzzles_generated:
-                            puzzles_generated.add(puzzle)        
+        while len(puzzles_generated) < number_puzzles: #time.time() - start_time < time_limit - 10 and
+
+            if number_puzzles > 1:
+                with ProcessPoolExecutor(max_workers = ncpus) as executor:
+                    args = ((puzzle_size, minimum_number_regions, color_bullets, bullet_probability, gen_blocked) for _ in range(10 * ncpus))
+                    results = executor.map(self.generate_puzzles_of_size, args)
+
+                    for result in results:
+                        puzzles = result
+
+                        for puzzle in puzzles:
+                            puzzle.clear_path()
+
+                            if puzzle not in puzzles_generated:
+                                puzzles_generated.add(puzzle)
+            else:
+                args = (puzzle_size, minimum_number_regions, color_bullets, bullet_probability, gen_blocked)
+                puzzle = self.generate_puzzles_of_size(args)
+                #puzzle[0].clear_path()
+                print(puzzle[0].is_solution())
+                puzzles_generated.add(puzzle[0])
+
         puzzle_id = 1
         for puzzle in puzzles_generated:
             if gen_blocked:
-                puzzle.save_state(puzzle_folder + '/' + str(puzzle_size[0]) + 'x' + str(puzzle_size[1]) + '_' + str(puzzle_id) + '_b')
+                file_name = str(puzzle_size[0]) + 'x' + str(puzzle_size[1]) + '_' + str(puzzle_id) + '_b'
+                puzzle.save_state(puzzle_folder + '/' + file_name)
+                """with open('blocked_puzzles_generated', 'a') as result_file:
+                    result_file.write("{:s}\n".format(file_name))"""
             else:
                 puzzle.save_state(puzzle_folder + '/' + str(puzzle_size[0]) + 'x' + str(puzzle_size[1]) + '_' + str(puzzle_id))
-            
+
             if puzzle_id == number_puzzles:
                 break
             
@@ -172,7 +186,7 @@ def main():
     if not os.path.exists(parameters.puzzle_folder):
         os.makedirs(parameters.puzzle_folder)
         
-    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 2))
+    ncpus = int(os.environ.get('SLURM_CPUS_PER_TASK', default = 1))
     
     color_bullets = [i for i in range(1, int(parameters.colors) + 1)]
     

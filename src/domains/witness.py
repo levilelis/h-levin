@@ -446,6 +446,18 @@ class WitnessState(Environment):
             for j in range(self._h_seg.shape[1]):
                 if self._h_seg[i][j] == 1:
                     ax.plot([j, j+1], [i, i], 'r', linewidth=5)
+
+        # Draw the blocked segments of the path
+        for i in range(self._v_blocked.shape[0]):
+            for j in range(self._v_blocked.shape[1]):
+                if self._v_blocked[i][j] == 1:
+                    ax.plot([j, j], [i, i+1], 'w', linewidth=5)
+
+        # Draw the blocked segments of the path
+        for i in range(self._h_blocked.shape[0]):
+            for j in range(self._h_blocked.shape[1]):
+                if self._h_blocked[i][j] == 1:
+                    ax.plot([j, j+1], [i, i], 'w', linewidth=5)
                 
         # Draw the separable bullets according to the values in self._cells and self._colors
         offset = 0.5
@@ -613,6 +625,7 @@ class WitnessState(Environment):
         v_size = self._v_seg.shape[0] * self._v_seg.shape[1]
         h_size = self._h_seg.shape[0] * self._h_seg.shape[1]
 
+
         # Vertical and horizontal paths used/unused on solution
         v_used = 0
         h_used = 0
@@ -659,6 +672,15 @@ class WitnessState(Environment):
             self._h_blocked[i][j] = 1
             h_unused.pop(r)
             h_blocks_used += 1
+
+        """r = random.randint(0, 9999)
+        print(r, self._v_seg)
+        print(r, self._v_blocked)
+        print('-------------')
+        print(r, self._h_seg)
+        print(r, self._h_blocked)
+        print('-------------')
+        print('\n')"""
 
     def has_tip_reached_goal(self):
         """
@@ -721,7 +743,7 @@ class WitnessState(Environment):
                     # If c is a duplicate, then continue with the next child
                     if closed_bfs[c[0]][c[1]] == 1:
                         continue
-                    # If c's color isn't neutral (zero) and it is different from current_color, then state isn't a soution
+                    # If c's color isn't neutral (zero) and it is different from current_color, then state isn't a solution
                     if current_color != 0 and self._cells[c[0]][c[1]] != 0 and self._cells[c[0]][c[1]] != current_color:
                         return False
                     # If current_color is neutral (zero) and c's color isn't, then attribute c's color to current_color
@@ -772,6 +794,7 @@ class WitnessState(Environment):
                     # mark state c as visited
                     closed_bfs[c[0]][c[1]] = 1
             regions.append(region)
+            #self.plot()
         return regions 
     
     def save_state(self, filename):
@@ -817,17 +840,22 @@ class WitnessState(Environment):
         file.write('\n')
 
         file.write('Blocked_v: ')
+        #print('Blocked_v: ')
         for i in range(self._v_blocked.shape[0]):
             for j in range(self._v_blocked.shape[1]):
                 if self._v_blocked[i][j] != 0:
                     file.write('|' + str(i) + ' ' + str(j))
+                    #print('|' + str(i) + ' ' + str(j), end='')
         file.write('\n')
+        #print('\n')
 
         file.write('Blocked_h: ')
+        #print('Blocked_h: ')
         for i in range(self._h_blocked.shape[0]):
             for j in range(self._h_blocked.shape[1]):
                 if self._h_blocked[i][j] != 0:
                     file.write('|' + str(i) + ' ' + str(j))
+                    #print('|' + str(i) + ' ' + str(j), end='')
         file.close()
             
     def convert_2_dict(self):
