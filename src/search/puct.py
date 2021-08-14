@@ -183,8 +183,7 @@ class PUCT():
             action = current_node.argmin_uct_values(max_q, min_q)
 
             if action is None:
-                self._backpropagate([current_node], [max_q])
-
+#                 self._backpropagate([current_node], [max_q])
                 return current_node, action
 
         return current_node, action
