@@ -4,12 +4,12 @@ output="output_train_witness/"
 domain_name="4x4-witness50k-"
 algorithm="PUCT"
 declare -a losses=("CrossEntropyLoss")
-constants=("1.0" "1.5" "2.0") 
+constants=("0.5" "1.0" "1.5" "2.0") 
 heuristic_scheme=("--learned-heuristic")
 
 scheduler="online" 
 
-for iter in {2..2}; do
+for iter in {2..5}; do
 	for scheme in "${heuristic_scheme[@]}"; do
 		for c in "${constants[@]}"; do
 			for loss in ${losses[@]}; do
@@ -20,9 +20,10 @@ for iter in {2..2}; do
 				name_scheme=${name_scheme//--/-}
 				c_name=${c//./}
 				name_scheme=${name_scheme//--/-}
-				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}"
-				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-v${iter}
-		
+				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-normalized-v${iter}"
+				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-normalized-v${iter}
+				#echo ${output_exp}
+				#echo ${model}
 				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train_puct_witness.sh
 			done
 		done

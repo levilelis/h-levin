@@ -3,7 +3,7 @@
 #SBATCH --mem=8000M        # memory per node
 #SBATCH --time=7-00:00      # time (DD-HH:MM)
 #SBATCH --output=%N-%j.out  # %N for node name, %j for jobID
-#SBATCH --account=def-lelis
+#SBATCH --account=rrg-lelis
 
 module load python/3.6
 source tensorflow/bin/activate
