@@ -22,8 +22,7 @@ for iter in {2..5}; do
 				name_scheme=${name_scheme//--/-}
 				output_exp="${output}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-normalized-v${iter}"
 				model=${domain_name}${lower_algorithm}-${lower_loss}${name_scheme}-${scheduler}-c${c_name}-normalized-v${iter}
-				#echo ${output_exp}
-				#echo ${model}
+				
 				sbatch --output=${output_exp} --export=scheme="${scheme}",constant=${c},algorithm=${algorithm},loss=${loss},model=${model} run_bootstrap_train_puct_witness.sh
 			done
 		done
