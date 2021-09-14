@@ -1342,6 +1342,9 @@ class Bootstrap:
 		solutions = {}
 		ordering = []
 
+		# Used for puzzle Baselines
+		all_puzzles = []  # Will hold the name, b and size of solution path that was solved with.
+
 		budget = self._initial_budget
 		memory = Memory()
 		start = time.time()
@@ -1382,6 +1385,8 @@ class Bootstrap:
 					number_solved += 1
 					current_solved_puzzles.add(puzzle_name)
 					puzzle_solution_pi = trajectory.get_solution_pi()
+					# Used for creation of Baselines
+					all_puzzles.append((puzzle_name, state_budget[puzzle_name], len(solution)))
 
 					# The next three are used on curriculum selection after this training
 					trajectories[puzzle_name] = trajectory
@@ -1451,6 +1456,9 @@ class Bootstrap:
 
 			print('Number solved: ', number_solved)
 
+		# Used to generate the baselines in log files
+		self.get_baselines(all_puzzles, planner, models)
+
 		print(cur_gen, list(models)[0].get_domain())
 		# Used for, after training and having the ordering, train a new ANN to select the curriculum puzzles if cur_gen=True
 		if list(models)[0].get_domain() == 'Witness' and cur_gen:
@@ -1474,6 +1482,138 @@ class Bootstrap:
 
 				# self._curriculum_selection_only(selector_models, ordering, solutions, solved_blocks)
 				self._curriculum_selection_only_select_at_end(selector_models, solutions, solved_blocks)
+
+	def by_b(self, e):
+		return e[1]  # Equivalent of the budget position on all_puzzles
+
+	def by_path(self, e):
+		return e[2]  # Equivalent of the path position on all_puzzles
+
+	def get_baselines(self, all_puzzles, planner, models):
+
+		last_solved_during_train = all_puzzles[-5:]
+		with open(join(self._log_folder + 'baseline_last_solved_during_train_' + self._model_name), 'a') as result_file:
+			for p in last_solved_during_train:
+				result_file.write("{:s}".format(p[0]))
+				result_file.write("\n")
+
+		all_puzzles.sort(key=self.by_b)
+		highest_budget_during_train = all_puzzles[-5:]
+
+		with open(join(self._log_folder + 'baseline_highest_budget_during_train_' + self._model_name), 'a') as result_file:
+			for p in highest_budget_during_train:
+				result_file.write("{:s}, b:{:d}".format(p[0], p[1]))
+				result_file.write("\n")
+
+		all_puzzles.sort(key=self.by_path)
+		longest_paths = all_puzzles[-5:]
+
+		with open(join(self._log_folder + 'baseline_longest_paths_' + self._model_name), 'a') as result_file:
+			for p in longest_paths:
+				result_file.write("{:s}, len(path):{:d}".format(p[0], p[2]))
+				result_file.write("\n")
+
+		all_puzzles_after_train = []  # Used for highest_budget_after_train baseline
+
+		start = time.time()
+		iteration = 1
+		total_expanded = 0
+		total_generated = 0
+
+		budget = self._initial_budget
+		current_solved_puzzles = set()
+		state_budget = {}
+
+		print("===== Solving Puzzles After Training =====")
+
+		for name, state in self._states.items():
+			state_budget[name] = self._initial_budget
+
+		with open(join(self._log_folder + 'training_bootstrap_after_train_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
+			result_file.write("{:d}".format(iteration))
+			result_file.write('\n')
+
+		while len(current_solved_puzzles) < self._number_problems:
+			number_solved = 0
+			batch_problems = {}
+			for name, state in self._states.items():
+				if name in current_solved_puzzles:
+					continue
+				batch_problems[name] = state
+
+			with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
+				# args = ((state, name, budget, nn_model) for name, state in batch_problems.items())
+				args = ((state, name, state_budget[name], models) for name, state in batch_problems.items())
+				results = executor.map(planner.search_for_learning, args)  # results = executor.map(planner.search_for_learning, args)
+			for result in results:
+				has_found_solution = result[0]
+				trajectory = result[1]
+				total_expanded += result[2]
+				total_generated += result[3]
+				puzzle_name = result[4]
+				state_budget[puzzle_name] = result[5]  # new budget for this particular puzzle
+
+				if has_found_solution:
+					solution = list(reversed(trajectory.get_actions()))
+					number_solved += 1
+					current_solved_puzzles.add(puzzle_name)
+					puzzle_solution_pi = trajectory.get_solution_pi()
+					# Used for creation of Baselines
+					all_puzzles_after_train.append((puzzle_name, state_budget[puzzle_name], len(solution)))
+
+
+					print(puzzle_name, 'pi:', puzzle_solution_pi)
+					with open(join(self._log_folder + 'training_bootstrap_after_train_' + self._model_name + '_puzzles_details'), 'a') as result_file:
+						result_file.write("{:s}, pi: {:e}, b: {:d}, exp: {:d}, gen: {:d}, sol: ".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name], result[2], result[3]))
+						for action in solution:
+							result_file.write(("{:d} ".format(action)))
+						result_file.write('\n')
+
+					with open(join(self._log_folder + 'training_bootstrap_after_train_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
+						result_file.write("{:s}, {:e}, {:d}, ".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name]))
+						for action in solution:
+							result_file.write(("{:d} ".format(action)))
+						result_file.write('\n')
+
+					if 'witness' in puzzle_name:
+						with open(join(self._log_folder + 'training_bootstrap_after_train_' + self._model_name + '_witness_ordering'), 'a') as result_file:
+							result_file.write("{:s}, {:e}, {:d}, {:d}".format(puzzle_name, puzzle_solution_pi, state_budget[puzzle_name], iteration))
+							result_file.write('\n')
+
+			end = time.time()
+			with open(join(self._log_folder + 'training_bootstrap_after_train_' + self._model_name), 'a') as results_file:
+				results_file.write(("{:d}, {:d}, {:d}, {:d}, {:d}, {:d}, {:f} ".format(iteration,
+																				 number_solved,
+																				 self._number_problems - len(current_solved_puzzles),
+																				 budget,
+																				 total_expanded,
+																				 total_generated,
+																				 end-start)))
+				results_file.write('\n')
+
+			if number_solved != 0:
+				for name, state in self._states.items():  # Resetting budget after train
+					state_budget[name] = self._initial_budget
+			else:  # If none solved, skip training
+				continue
+
+			batch_problems.clear()
+			iteration += 1
+			
+			with open(join(self._log_folder + 'training_bootstrap_after_train_' + self._model_name + '_puzzles_ordering'), 'a') as result_file:
+				result_file.write("{:d}".format(iteration))
+				result_file.write('\n')
+
+			print('Number solved: ', number_solved)
+
+		all_puzzles.sort(key=self.by_b)
+		highest_budget_after_train = all_puzzles_after_train[-5:]
+
+		with open(join(self._log_folder + 'baseline_highest_budget_after_train_' + self._model_name), 'a') as result_file:
+			for p in highest_budget_after_train:
+				result_file.write("{:s}, b:{:d}".format(p[0], p[1]))
+				result_file.write("\n")
+
 
 	def solve_problems(self, planner, nn_model, ordering=None, solutions=None, cur_gen=False):
 		if self._scheduler == 'gbs':
