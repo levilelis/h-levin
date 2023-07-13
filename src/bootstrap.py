@@ -38,6 +38,8 @@ class Bootstrap:
         start = time.time()
         
         current_solved_puzzles = set()
+        
+        last_puzzle = list(self._states)[-1]
                 
         while len(current_solved_puzzles) < self._number_problems:
             number_solved = 0
@@ -50,7 +52,7 @@ class Bootstrap:
                 
                 batch_problems[name] = state
                 
-                if len(batch_problems) < self._batch_size and self._number_problems - len(current_solved_puzzles) > self._batch_size:
+                if len(batch_problems) < self._batch_size and last_puzzle != name:#and self._number_problems - len(current_solved_puzzles) > self._batch_size:
                     continue
             
                 with ProcessPoolExecutor(max_workers = self._ncpus) as executor:
