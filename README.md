@@ -1,12 +1,26 @@
+## Overview
 Implementation of the algorithms described in "Policy-Guided Heuristic Search with Guarantees" 
 by L. Orseau and L. Lelis, published at AAAI'21.
 
+## Setup
+
+Create a python==3.10.8 env with [virtualenv](https://virtualenv.pypa.io/en/latest/) or 
+[conda](https://docs.conda.io/en/latest/). 
+
+Install the required packages as
+```
+pip install -r requirements.txt
+```
+
+
+## Details
 PHS is dubbed BFSLevin (see src/bfs_levin.py). The same class is used to implement LTS, the 
 tree search algorithm that uses a policy to guide search (see the paper "Single-Agent Policy 
 Tree Search with Guarantees" by L. Orseau, L. Lelis, T. Lattimore, and T. Weber for details).
 
 PHS can be trained for a small set of The Witness puzzles with the following command:
 
+```
 src/main.py --learned-heuristic 
 			-a LevinStar 
 			-l LevinLoss 
@@ -15,11 +29,13 @@ src/main.py --learned-heuristic
 			-b 2000 
 			-d Witness 
 			--learn
+```
 
 The program will save a trained neural model with the name model_test_witness, which can be
 used solve other instances with the following command (here we are solving the same set of
 instances used to train the model).
 
+```
 python3 src/main.py --learned-heuristic 
 					-a LevinStar 
 					-l LevinLoss 
@@ -27,7 +43,7 @@ python3 src/main.py --learned-heuristic
 					-p problems/witness/puzzles_3x3/ 
 					-b 2000 
 					-d Witness
-
+```
 Here are the options of search algorithms implemented:
 
 AStar (A*, see file src/search/a_star.py)
